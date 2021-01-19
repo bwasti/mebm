@@ -5,15 +5,17 @@
 # todo
 
 - timeline
-  - [ ] cursor change over drag
-  - [ ] trim at play head
-  - [ ] mouseover preview
+  - [ ] cursor change over drag (easy)
+  - [ ] trim at play head (medium)
+  - [ ] mouseover preview (easy)
 - file management
-  - [ ] error on bad type
-  - [ ] upload file
-  - [ ] export status
+  - [ ] error on bad type (easy)
+  - [ ] upload file (easy/medium)
+  - [ ] export status (easy)
 - editing
-  - [ ] face tracking
-  - [ ] text color
-  - [ ] opacity
-  - [ ] rotation
+  - [ ] undo (hard)
+  - [ ] audio (hard)
+  - [ ] face tracking (medium/easy)
+  - [ ] text color (easy)
+  - [ ] opacity (easy)
+  - [ ] rotation (medium)
