@@ -377,8 +377,8 @@ class Player {
     this.selected_layer = null;
     this.onend_callback = null;
     this.update = null;
-    this.width = 1280;
-    this.height = 720;
+    this.width = 1280 / 2;
+    this.height = 720 / 2;
     this.total_time = 0;
     this.last_step = null;
     this.time = 0;
@@ -398,14 +398,66 @@ class Player {
     this.setupDragHandler();
   }
 
-
   scrubStart(ev) {
     this.scrubbing = true;
     let rect = this.time_holder.getBoundingClientRect();
     this.time = ev.offsetX / rect.width * this.total_time;
+
     window.addEventListener('mouseup', this.scrubEnd.bind(this), {
       once: true
     });
+
+    // can't drag unselected
+    if (!this.selected_layer) {
+      return;
+    }
+    // check if we're dragging anything
+    let tol = rect.height * click_tolerance / 2;
+    // location of the bar
+    let maxY = rect.height / 2 + tol;
+    let minY = rect.height / 2 - tol;
+    if (ev.offsetY < minY || ev.offsetY > maxY) {
+      return;
+    }
+
+    // dragging something
+    let l = this.selected_layer;
+    tol = 0.03 * this.time;
+
+    if (Math.abs(this.time - l.start_time) < tol) {
+      this.time = l.start_time;
+      let base_t = this.time;
+      this.dragging = function(t) {
+        let diff = t - base_t;
+        base_t = t;
+        if (l instanceof MoveableLayer) {
+          let diff = l.start_time - t;
+          l.total_time += diff;
+          l.start_time -= diff;
+        } else {
+          l.start_time += diff;
+        }
+      }
+    } else if (Math.abs(this.time - (l.start_time + l.total_time)) < tol) {
+      this.time = l.start_time + l.total_time;
+      let base_t = this.time;
+      this.dragging = function(t) {
+        let diff = t - base_t;
+        base_t = t;
+        if (l instanceof MoveableLayer) {
+          l.total_time += diff;
+        } else {
+          l.start_time += diff;
+        }
+      }
+    } else if (this.time < l.start_time + l.total_time && this.time > l.start_time) {
+      let base_t = this.time;
+      this.dragging = function(t) {
+        let diff = t - base_t;
+        base_t = t;
+        l.start_time += diff;
+      }
+    }
   }
 
   scrubMove(ev) {
@@ -416,59 +468,13 @@ class Player {
     this.time = ev.offsetX / rect.width * this.total_time;
     if (this.dragging) {
       this.dragging(this.time);
-      return;
-    }
-    // check if we're dragging anything else
-    let tol = rect.height * click_tolerance / 2;
-    let maxY = rect.height / 2 + tol;
-    let minY = rect.height / 2 - tol;
-    if (ev.offsetY > minY && ev.offsetY < maxY) {
-      // dragging something
-      if (!this.selected_layer) {
-        return;
-      }
-      let l = this.selected_layer;
-      let tol = 0.02 * this.total_time;
-      if (Math.abs(this.time - l.start_time) < tol) {
-        this.time = l.start_time;
-        let base_t = this.time;
-        this.dragging = function(t) {
-          let diff = t - base_t;
-          base_t = t;
-          if (l instanceof MoveableLayer) {
-            let diff = l.start_time - t;
-            l.total_time += diff;
-            l.start_time -= diff;
-          } else {
-            l.start_time += diff;
-          }
-        }
-      } else if (Math.abs(this.time - (l.start_time + l.total_time)) < tol) {
-        this.time = l.start_time + l.total_time;
-        let base_t = this.time;
-        this.dragging = function(t) {
-          let diff = t - base_t;
-          base_t = t;
-          if (l instanceof MoveableLayer) {
-            l.total_time += diff;
-          } else {
-            l.start_time += diff;
-          }
-        }
-      } else if (this.time < l.start_time + l.total_time && this.time > l.start_time) {
-        let base_t = this.time;
-        this.dragging = function(t) {
-          let diff = t - base_t;
-          base_t = t;
-          l.start_time += diff;
-        }
-      }
     }
   }
 
   scrubEnd(ev) {
     this.scrubbing = false;
     this.dragging = null;
+    this.total_time = 0;
   }
 
   setupPinchHadler() {
@@ -640,6 +646,28 @@ class Player {
     let thumb = document.createElement('canvas');
     let title = document.createElement('div');
     preview.classList.toggle('preview');
+
+    preview.setAttribute('draggable', true);
+    preview.addEventListener('dragstart', (function(ev) {
+      this.preview_dragging = preview;
+      this.preview_dragging_layer = layer;
+    }).bind(this));
+    preview.addEventListener('dragover', function(ev) {
+      ev.preventDefault();
+    });
+    preview.addEventListener('drop', (function(ev) {
+      preview.before(this.preview_dragging);
+      let idx = this.layers.indexOf(this.preview_dragging_layer);
+      if (idx > -1) {
+        this.layers.splice(idx, 1);
+      }
+      let new_idx = this.layers.indexOf(layer);
+      this.layers.splice(new_idx + 1, 0, this.preview_dragging_layer);
+      this.select(this.preview_dragging_layer);
+      this.preview_dragging = null;
+      this.preview_dragging_layer = null;
+    }).bind(this));
+
     preview.addEventListener('click', (function() {
       this.select(layer);
     }).bind(this));
@@ -677,7 +705,7 @@ class Player {
     if (this.last_step === null) {
       this.last_step = realtime;
     }
-    if (this.playing) {
+    if (this.playing && this.total_time > 0) {
       this.time += (realtime - this.last_step);
       if (this.onend_callback && this.time >= this.total_time) {
         this.onend_callback(this);
@@ -692,6 +720,8 @@ class Player {
     }
     this.time_ctx.fillStyle = `rgb(210,210,210)`;
     this.time_ctx.fillRect(x, 0, 2, this.time_canvas.height);
+    this.time_ctx.fillText(this.time.toFixed(2), 5, 10);
+    this.time_ctx.fillText(this.total_time.toFixed(2), 5, 20);
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     for (let layer of this.layers) {
