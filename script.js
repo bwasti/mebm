@@ -763,10 +763,14 @@ function exportVideo(blob) {
   vid.src = URL.createObjectURL(blob);
   vid.controls = true;
   backgroundElem(vid);
-  const a = document.createElement('a');
-  a.download = 'exported.webm';
+  let h = document.getElementById('header');
+  let a = h.querySelector('a');
+  if (!a) {
+    a = document.createElement('a');
+    a.download = 'exported.webm';
+    a.textContent = 'download';
+  }
   a.href = vid.src;
-  a.textContent = 'download';
   document.getElementById('header').appendChild(a);
 }
 
