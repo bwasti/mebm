@@ -6,8 +6,10 @@
 
 - timeline
   - [ ] cursor change over drag (easy)
+  - [ ] allow extending beyond current max time (medium)
   - [ ] split at play head (medium)
   - [ ] mouseover preview (easy)
+  - [ ] display timelines of other layers for context (medium)
 - file management
   - [ ] error on bad type (easy)
   - [ ] upload file (easy/medium)
