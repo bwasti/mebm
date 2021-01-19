@@ -1,5 +1,7 @@
 # mebm
 
+It works "better" on Safari (supports more formats), but it's less likely to crash on Chrome.
+
 [link](http://bwasti.github.io/mebm)
 
 # todo
