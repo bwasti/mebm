@@ -1,0 +1,107 @@
+html, body {
+  margin: 0;
+  padding: 0;
+}
+
+.full {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+#background {
+  z-index: 0;
+  background: red;
+  overflow: hidden;
+}
+
+#foreground {
+  z-index: 1000000;
+  background: black;
+}
+
+#foreground #canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 20%;
+  width: 70%;
+}
+
+#layer_holder {
+  position: absolute;
+  background: rgb(32,32,32);
+  right: 0;
+  top: 0;
+  bottom: 20%;
+  width: 30%;
+  overflow: scroll;
+  color: rgb(210,210,210);
+  font-family: Helvetica;
+}
+
+#header {
+  text-align: center;
+}
+
+#header a {
+  color: white;
+}
+#header a:visited {
+  color: white;
+}
+
+#header div {
+  padding: 4px;
+  display: inline-block;
+  margin: 4px;
+}
+
+#header div:hover {
+  cursor: pointer;
+}
+
+#layers .preview {
+  display: flex;
+  padding: 4px;
+}
+
+#layers .preview_title {
+  padding: 5px;
+}
+
+
+#layers .selected {
+  border-left: solid rgb(250, 230, 91) 4px;
+}
+
+#layers .preview_thumb {
+  background: black;
+  width: 50%;
+}
+
+#foreground #time {
+  position: absolute;
+  background: rgb(55,55,55);
+  right: 0;
+  left: 0;
+  bottom: 0;
+  height: 20%;
+  width: 100%;
+}
+
+#foreground #time canvas {
+  width: 100%;
+  height: 100%;
+}
+
+#foreground #canvas canvas {
+  width: 100%;
+  height: 100%;
+}
