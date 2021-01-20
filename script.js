@@ -501,13 +501,18 @@ class Player {
       if (layer.start_time + layer.total_time < this.time) {
         continue;
       }
-      if (Math.abs(ev.offsetY - y_coord) < 0.05 * this.time_canvas.height) {
+      if (Math.abs(ev.offsetY - y_coord) < (0.05 * this.time_canvas.height)) {
         this.select(layer);
       }
     }
 
     // can't drag unselected
     if (!this.selected_layer) {
+      return;
+    }
+
+    // edge case -- we have a selected layer, but not close enough
+    if (Math.abs(ev.offsetY - y_coord) > (0.05 * this.time_canvas.height)) {
       return;
     }
 
@@ -573,7 +578,6 @@ class Player {
     this.cursor_preview.style.bottom = (rect.height) + "px";
 
     this.aux_time = time;
-    this.render(this.cursor_ctx, this.aux_time, false);
     this.cursor_text.textContent = this.aux_time.toFixed(2) + "/" + this.total_time.toFixed(2)
     
 
@@ -871,6 +875,7 @@ class Player {
       let aux_x = this.time_canvas.width * this.aux_time / this.total_time;
       this.time_ctx.fillStyle = `rgb(110,110,110)`;
       this.time_ctx.fillRect(aux_x, 0, 1, this.time_canvas.height);
+      this.render(this.cursor_ctx, this.aux_time, false);
     }
 
     let y_inc = this.time_canvas.height / (this.layers.length + 1);
@@ -893,18 +898,21 @@ class Player {
 
 let player = new Player();
 
+function addFile(file) {
+  if (file.type.indexOf('video') >= 0) {
+    player.add(new VideoLayer(file));
+  } else if (file.type.indexOf('image') >= 0) {
+    player.add(new ImageLayer(file));
+  }
+}
+
 window.addEventListener('drop', function(ev) {
   ev.preventDefault();
-
   if (ev.dataTransfer.items) {
     for (var i = 0; i < ev.dataTransfer.items.length; i++) {
       if (ev.dataTransfer.items[i].kind === 'file') {
-        var file = ev.dataTransfer.items[i].getAsFile();
-        if (file.type.indexOf('video') >= 0) {
-          player.add(new VideoLayer(file));
-        } else if (file.type.indexOf('image') >= 0) {
-          player.add(new ImageLayer(file));
-        }
+        const file = ev.dataTransfer.items[i].getAsFile();
+        addFile(file);
       }
     }
   }
@@ -953,7 +961,20 @@ function exportVideo(blob) {
   document.getElementById('header').appendChild(a);
 }
 
+function upload() {
+  let f = document.getElementById('filepicker');
+  f.addEventListener('change', function(e) {
+    for (let file of e.target.files) {
+      addFile(file);
+    }
+  });
+  f.click();
+}
+
 function download() {
+  const e = document.getElementById('export');
+  const e_text = e.textContent;
+  e.textContent = "exporting...";
   const chunks = [];
   const stream = player.canvas.captureStream();
   const rec = new MediaRecorder(stream);
@@ -966,5 +987,8 @@ function download() {
   rec.start();
   player.onend(function(p) {
     rec.stop();
+    e.textContent = e_text;
+    player.playing = false;
+    player.time = 0;
   });
 }

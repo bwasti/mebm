@@ -5,7 +5,10 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="background" class="full">should not be visible</div>
+  <div id="background" class="full">
+    should not be visible
+    <input type="file" id="filepicker" multiple accept="video/*,image/*"/>
+  </div>
   <div id="foreground" class="full">
     <div id="cursor_preview">
      <div></div>
@@ -14,9 +17,9 @@
     <div id="canvas"></div>
     <div id="layer_holder">
      <div id="header">
-      <div onclick='alert("just drag stuff in")'>drag media</div>
-      <div onclick="add_text()">add text</div>
-      <div onclick="download()">export</div>
+      <div onclick='upload()'>+ media</div>
+      <div onclick='add_text()'>+ text</div>
+      <div id="export" onclick='download()'>export</div>
      </div>
      <div id="layers"> </div>
     </div>
