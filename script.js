@@ -861,6 +861,7 @@ class Player {
       this.time += (realtime - this.last_step);
       if (this.onend_callback && this.time >= this.total_time) {
         this.onend_callback(this);
+        this.onend_callback = null;
       }
       this.time %= this.total_time;
     }
