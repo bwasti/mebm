@@ -963,10 +963,11 @@ function exportVideo(blob) {
 
 function upload() {
   let f = document.getElementById('filepicker');
-  f.addEventListener('change', function(e) {
+  f.addEventListener('input', function(e) {
     for (let file of e.target.files) {
       addFile(file);
     }
+    f.value = '';
   });
   f.click();
 }
