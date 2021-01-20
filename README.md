@@ -3,8 +3,8 @@
 mebm is a browser based video editor that supports animation of images and text overlays.
 The animation is done with key-frames (denoted in blue on the timeline) and linear interpolation.
 
-The design values simplicity and rudimentary functionality for now.  It is only useful for adding animated overlays
-to short gifs at the moment.
+The design values simplicity and rudimentary functionality over a full feature set.
+At the moment, it is only useful for adding animated overlays to short gifs.
 
 [link](http://bwasti.github.io/mebm)
 
