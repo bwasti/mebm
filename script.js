@@ -956,6 +956,40 @@ window.addEventListener('keydown', function(ev) {
   }
 });
 
+window.addEventListener('load', function() {
+  let localStorage = window.localStorage;
+  let seen = localStorage.getItem('_seen');
+  if (!seen) {
+    const div = document.createElement('div');
+    const close = document.createElement('a');
+    const text = document.createElement('p');
+    const vid = document.createElement('video');
+    close.addEventListener('click', function() {
+      div.remove();
+    });
+    close.textContent = "[x]";
+    close.id = "close";
+    text.innerHTML = `welcome!
+      <br>
+      <br>
+      more usage information can be found <a href="https://github.com/bwasti/mebm" target="_blank">here</a>
+      ` ;
+    vid.src = "https://github.com/bwasti/mebm/blob/main/README_assets/usage.mp4?raw=true";
+    vid.setAttribute('autoplay', true);
+    vid.setAttribute('loop', true);
+    vid.setAttribute('playsinline', true);
+    vid.setAttribute('muted', true);
+    //vid.setAttribute('controls', true);
+    vid.style.width = '100%';
+    div.appendChild(close);
+    div.appendChild(text);
+    div.appendChild(vid);
+    div.classList.toggle('popup');
+    document.body.appendChild(div);
+    localStorage.setItem('_seen', 'true');
+  }
+});
+
 window.onbeforeunload = function() {
   return true;
 };
