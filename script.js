@@ -105,8 +105,8 @@ class RenderedLayer {
 class MoveableLayer extends RenderedLayer {
   constructor(file) {
     super(file);
-    // all moveables 5 seconds default
-    this.total_time = 5 * 1000;
+    // all moveables 2 seconds default
+    this.total_time = 2 * 1000;
     this.frames = [];
     for (let i = 0; i < (this.total_time / 1000) * fps; ++i) {
       // x, y, scale, rot, anchor(bool)
