@@ -41,9 +41,10 @@ class RenderedLayer {
       }
     }).bind(this));
     this.title_div.appendChild(delete_option);
-    const desciption = document.createElement('div');
-    desciption.textContent = "\"" + this.name + "\"";
-    this.title_div.appendChild(desciption);
+    const description = document.createElement('div');
+    description.classList.toggle('description');
+    description.textContent = "\"" + this.name + "\"";
+    this.title_div.appendChild(description);
   }
 
   init(player, preview) {
@@ -287,6 +288,15 @@ class TextLayer extends MoveableLayer {
 
   init(player, preview) {
     super.init(player, preview);
+    let description = this.title_div.querySelector('.description');
+    description.addEventListener('click', (function(e) {
+      const new_text = prompt("new text");
+      if (new_text) {
+        this.text = new_text;
+        this.name = new_text;
+        description.textContent = "\"" + this.name + "\"";
+      }
+    }).bind(this));
     let color_picker = document.createElement('input');
     color_picker.type = "color";
     color_picker.value = this.color;
