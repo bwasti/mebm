@@ -29,4 +29,5 @@ Audio is not yet supported, but is planned.
   - [ ] compress video frames
   - [ ] investigate memory use warning on safari
   - [ ] cache render output for thumbnails
-  
+  - [ ] move height/width setting logic out of render loop
+  - [ ] improve text scaling logic (avoid font size, use ctx.scale)
