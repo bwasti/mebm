@@ -281,7 +281,19 @@ class TextLayer extends MoveableLayer {
     };
     super(f);
     this.text = text;
+    this.color = "#ffffff";
     this.ready = true;
+  }
+
+  init(player, preview) {
+    super.init(player, preview);
+    let color_picker = document.createElement('input');
+    color_picker.type = "color";
+    color_picker.value = this.color;
+    this.title_div.appendChild(color_picker);
+    color_picker.addEventListener('change', (function(e) {
+      this.color = e.target.value;
+    }).bind(this));
   }
 
   render(ctx_out, ref_time) {
@@ -296,7 +308,7 @@ class TextLayer extends MoveableLayer {
       let y = f[1] + this.canvas.height / 2;
       this.ctx.shadowColor = "black";
       this.ctx.shadowBlur = 7;
-      this.ctx.fillStyle = "#ffffff";
+      this.ctx.fillStyle = this.color;
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.ctx.fillText(this.text, x, y);
       this.drawScaled(this.ctx, ctx_out);
@@ -416,6 +428,10 @@ class Player {
     this.time_canvas.addEventListener('mouseleave', this.scrubEnd.bind(this));
     this.time_ctx = this.time_canvas.getContext('2d');
     this.time_holder.appendChild(this.time_canvas);
+    this.cursor_preview = document.getElementById('cursor_preview');
+    this.cursor_canvas = this.cursor_preview.querySelector('canvas');
+    this.cursor_ctx = this.cursor_canvas.getContext('2d');
+    this.cursor_text = this.cursor_preview.querySelector('div');
     window.requestAnimationFrame(this.loop.bind(this));
 
     this.setupPinchHadler();
@@ -499,18 +515,16 @@ class Player {
       }
     }
 
-    const cursor_prev = document.getElementById('cursor_preview');
-    cursor_prev.style.display = "block";
-    const cursor_text = cursor_prev.children[0];
-    const cursor_canvas = cursor_prev.children[1];
-    const cursor_ctx = cursor_canvas.getContext('2d');
-    let cursor_x = Math.max(ev.clientX - cursor_canvas.width / 2, 0);
-    cursor_x = Math.min(cursor_x, rect.width - cursor_canvas.width );
-    cursor_prev.style.left = cursor_x + "px";
-    cursor_prev.style.bottom = (rect.height) + "px";
+
+    let cursor_x = Math.max(ev.clientX - this.cursor_canvas.width / 2, 0);
+    cursor_x = Math.min(cursor_x, rect.width - this.cursor_canvas.width );
+    this.cursor_preview.style.display = "block";
+    this.cursor_preview.style.left = cursor_x + "px";
+    this.cursor_preview.style.bottom = (rect.height) + "px";
+
     this.aux_time = time;
-    this.render(cursor_ctx, this.aux_time, false);
-    cursor_text.textContent = this.aux_time.toFixed(2) + "/" + this.total_time.toFixed(2)
+    this.render(this.cursor_ctx, this.aux_time, false);
+    this.cursor_text.textContent = this.aux_time.toFixed(2) + "/" + this.total_time.toFixed(2)
     
 
     if (this.scrubbing) {
@@ -523,9 +537,8 @@ class Player {
   }
 
   scrubEnd(ev) {
-    let cursor_prev = document.getElementById('cursor_preview');
     document.body.style.cursor = "default";
-    cursor_prev.style.display = "none";
+    this.cursor_preview.style.display = "none";
     this.scrubbing = false;
     this.dragging = null;
     this.total_time = 0;

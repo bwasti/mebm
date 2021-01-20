@@ -92,6 +92,10 @@ a:visited {
   width: 50%;
 }
 
+#layers .preview_title input {
+  margin: 5px;
+}
+
 #layers div {
   border-left: solid rgba(210, 210, 210, 0) 4px;
 }
