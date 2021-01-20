@@ -293,7 +293,6 @@ class ImageLayer extends MoveableLayer {
         this.ready = true;
         this.width = this.img.naturalWidth;
         this.height = this.img.naturalHeight;
-
       }).bind(this));
     }).bind(this), false);
     this.reader.readAsDataURL(file);
@@ -350,7 +349,7 @@ class TextLayer extends MoveableLayer {
       this.ctx.font = Math.floor(scale * 30) + "px Georgia";
       let rect = this.ctx.measureText(this.text);
       this.width = rect.width;
-      this.height = rect.height;
+      this.height = rect.actualBoundingBoxAscent + rect.actualBoundingBoxDescent;
       let x = f[0] + this.canvas.width / 2;
       let y = f[1] + this.canvas.height / 2;
       this.ctx.shadowColor = "black";
@@ -625,8 +624,12 @@ class Player {
     let wheel = function(e) {
       e.preventDefault();
       if (e.ctrlKey || e.shiftKey) {
+        let delta = e.deltaY;
+        if (!Math.abs(delta) && e.deltaX != 0) {
+          delta = e.deltaX * 0.5;
+        }
         let scale = 1;
-        scale -= e.deltaY * 0.01;
+        scale -= delta * 0.01;
         // Your zoom/scale factor
         callback(scale, 0);
       }
