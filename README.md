@@ -9,11 +9,6 @@ Audio is not yet supported, but is planned.
 [>>> link <<<](http://bwasti.github.io/mebm)
 
 # usage
-<p align="center">
-<img src="https://github.com/bwasti/mebm/blob/main/README_assets/usage.gif?raw=true" width="70%">
-  <br>output:<br>
-<img src="https://github.com/bwasti/mebm/blob/main/README_assets/result.gif?raw=true" width="30%">
-</p>
 
 - space to pause/play
 - select layers to manipulate them (click on the timeline or sidebar)
@@ -24,7 +19,12 @@ Audio is not yet supported, but is planned.
 - export by clicking "export"
   - let video play to completion
   - click "download" to grab a copy (.webm)
-
+  
+<p align="center">
+<img src="https://github.com/bwasti/mebm/blob/main/README_assets/usage.gif?raw=true" width="70%">
+  <br>output:<br>
+<img src="https://github.com/bwasti/mebm/blob/main/README_assets/result.gif?raw=true" width="30%">
+</p>
 # todo
 
 - timeline
