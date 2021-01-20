@@ -81,11 +81,11 @@ class RenderedLayer {
     return;
   }
 
-  drawScaled(ctx, ctx_out) {
-    let width = ctx.canvas.clientWidth;
-    let height = ctx.canvas.clientHeight;
-    let in_ratio = width / height;
-    let out_ratio = ctx_out.canvas.clientWidth / ctx_out.canvas.clientHeight;
+  drawScaled(ctx, ctx_out, video = false) {
+    const width = video ? ctx.videoWidth : ctx.canvas.clientWidth;
+    const height = video ? ctx.videoHeight : ctx.canvas.clientHeight;
+    const in_ratio = width / height;
+    const out_ratio = ctx_out.canvas.clientWidth / ctx_out.canvas.clientHeight;
     let ratio = 1;
     let offset_width = 0;
     let offset_height = 0;
@@ -98,7 +98,7 @@ class RenderedLayer {
       ratio = ctx_out.canvas.clientHeight / height;
       offset_width = (ctx_out.canvas.clientWidth - (ratio * width)) / 2;
     }
-    ctx_out.drawImage(ctx.canvas,
+    ctx_out.drawImage((video ? ctx : ctx.canvas),
       0, 0, width, height,
       offset_width, offset_height, ratio * width, ratio * height);
   }
@@ -305,7 +305,7 @@ class ImageLayer extends MoveableLayer {
       let x = f[0] + this.canvas.width / 2 - this.width / 2;
       let y = f[1] + this.canvas.height / 2 - this.height / 2;
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.ctx.drawImage(this.img, 0, 0, this.width, this.height, x, y, scale * this.width, scale * this.height);
+      this.ctx.drawImage(this.img, 0, 0, this.width, this.height, x, y, scale * this.canvas.width, scale * this.canvas.height);
       this.drawScaled(this.ctx, ctx_out);
     }
   }
@@ -393,8 +393,6 @@ class VideoLayer extends RenderedLayer {
           this.width = Math.floor(width / scale);
           this.height = Math.floor(height / scale);
         }
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
         this.convertToArrayBuffer();
       }).bind(this));
       this.video.src = this.reader.result;
@@ -407,7 +405,12 @@ class VideoLayer extends RenderedLayer {
       this.video.currentTime = t;
       this.video.pause();
       this.video.addEventListener('seeked', (function(ev) {
-        this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+        this.drawScaled(this.video, this.ctx, true);
+        this.thumb_canvas.width = this.thumb_canvas.clientWidth * dpr;
+        this.thumb_canvas.height = this.thumb_canvas.clientHeight * dpr;
+        this.thumb_ctx.clearRect(0, 0, this.thumb_canvas.clientWidth, this.thumb_canvas.clientHeight);
+        this.thumb_ctx.scale(dpr, dpr);
+        this.drawScaled(this.ctx, this.thumb_ctx);
         let frame = this.ctx.getImageData(0, 0, this.canvas.width, this.canvas.height);
         resolve(frame);
       }).bind(this), {
@@ -426,8 +429,6 @@ class VideoLayer extends RenderedLayer {
         sum += frame.data[j];
       }
       this.frames.push(frame);
-      this.ctx.putImageData(frame, 0, 0);
-      this.drawScaled(this.ctx, this.thumb_ctx);
       this.title_div.textContent = (100 * i / (d * fps)).toFixed(2) + "%";
     }
     this.ready = true;
