@@ -223,7 +223,13 @@ class MoveableLayer extends RenderedLayer {
     let index = this.getIndex(ref_time);
     if (change.scale) {
       this.anchor(index);
-      this.interpolate(index, 2, f[2] * change.scale);
+      const old_scale = f[2];
+      const new_scale = f[2] * change.scale;
+      let delta_x = ((this.width * old_scale) - (this.width * new_scale)) / 2;
+      let delta_y = ((this.height * old_scale) - (this.height * new_scale)) / 2;
+      this.interpolate(index, 2, new_scale);
+      this.interpolate(index, 0, f[0] + delta_x);
+      this.interpolate(index, 1, f[1] + delta_y);
     }
     if (change.x) {
       this.anchor(index);
