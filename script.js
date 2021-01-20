@@ -3,8 +3,8 @@ function backgroundElem(elem) {
   bg.appendChild(elem);
 }
 
+const dpr = window.devicePixelRatio || 1;
 const fps = 20;
-const click_tolerance = 0.05; // 5% tolerance
 
 class RenderedLayer {
   constructor(file) {
@@ -25,9 +25,10 @@ class RenderedLayer {
     if (!this.ready) {
       return;
     }
-    this.thumb_canvas.width = this.thumb_canvas.clientWidth;
-    this.thumb_canvas.height = this.thumb_canvas.clientHeight;
-    this.thumb_ctx.clearRect(0, 0, this.thumb_canvas.width, this.thumb_canvas.height);
+    this.thumb_canvas.width = this.thumb_canvas.clientWidth * dpr;
+    this.thumb_canvas.height = this.thumb_canvas.clientHeight * dpr;
+    this.thumb_ctx.clearRect(0, 0, this.thumb_canvas.clientWidth, this.thumb_canvas.clientHeight);
+    this.thumb_ctx.scale(dpr, dpr);
     this.render(this.thumb_ctx, ref_time);
   }
 
@@ -55,11 +56,12 @@ class RenderedLayer {
     this.title_div = this.preview.querySelector('.preview_title');
     this.thumb_canvas = this.preview.querySelector('.preview_thumb');
     this.thumb_ctx = this.thumb_canvas.getContext('2d');
+    this.thumb_ctx.scale(dpr, dpr);
     this.setup_preview();
   }
 
   render_time(ctx, y_coord, width, selected) {
-    let scale = ctx.canvas.width / this.player.total_time;
+    let scale = ctx.canvas.clientWidth / this.player.total_time;
     let start = scale * this.start_time;
     let length = scale * this.total_time;
     if (selected) {
@@ -80,21 +82,21 @@ class RenderedLayer {
   }
 
   drawScaled(ctx, ctx_out) {
-    let width = ctx.canvas.width;
-    let height = ctx.canvas.height;
+    let width = ctx.canvas.clientWidth;
+    let height = ctx.canvas.clientHeight;
     let in_ratio = width / height;
-    let out_ratio = ctx_out.canvas.width / ctx_out.canvas.height;
+    let out_ratio = ctx_out.canvas.clientWidth / ctx_out.canvas.clientHeight;
     let ratio = 1;
     let offset_width = 0;
     let offset_height = 0;
     if (in_ratio > out_ratio) { // video is wider
       // match width
-      ratio = ctx_out.canvas.width / width;
-      offset_height = (ctx_out.canvas.height - (ratio * height)) / 2;
+      ratio = ctx_out.canvas.clientWidth / width;
+      offset_height = (ctx_out.canvas.clientHeight - (ratio * height)) / 2;
     } else { // out is wider
       // match height
-      ratio = ctx_out.canvas.height / height;
-      offset_width = (ctx_out.canvas.width - (ratio * width)) / 2;
+      ratio = ctx_out.canvas.clientHeight / height;
+      offset_width = (ctx_out.canvas.clientWidth - (ratio * width)) / 2;
     }
     ctx_out.drawImage(ctx.canvas,
       0, 0, width, height,
@@ -244,7 +246,7 @@ class MoveableLayer extends RenderedLayer {
   // moveable layers have anchor points we'll want to show
   render_time(ctx, y_coord, base_width, selected) {
     super.render_time(ctx, y_coord, base_width, selected);
-    let scale = ctx.canvas.width / this.player.total_time;
+    let scale = ctx.canvas.clientWidth / this.player.total_time;
     let width = 4 * base_width;
     for (let i = 0; i < this.frames.length; ++i) {
       let f = this.frames[i];
@@ -392,6 +394,8 @@ class VideoLayer extends RenderedLayer {
           this.width = Math.floor(width / scale);
           this.height = Math.floor(height / scale);
         }
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
         this.convertToArrayBuffer();
       }).bind(this));
       this.video.src = this.reader.result;
@@ -499,28 +503,25 @@ class Player {
       once: true
     });
 
-    let y_inc = this.time_canvas.height / (this.layers.length + 1);
-    let y_coord = this.time_canvas.height;
+    let y_inc = this.time_canvas.clientHeight / (this.layers.length + 1);
+    let y_coord = this.time_canvas.clientHeight;
+    let mouseover = false;
     for (let layer of this.layers) {
       y_coord -= y_inc;
-      if (layer.start_time > this.time) {
+      if (layer.start_time > (1.01 * this.time)) {
         continue;
       }
-      if (layer.start_time + layer.total_time < this.time) {
+      if (layer.start_time + layer.total_time < (0.99 * this.time)) {
         continue;
       }
-      if (Math.abs(ev.offsetY - y_coord) < (0.05 * this.time_canvas.height)) {
+      if (Math.abs(ev.offsetY - y_coord) < (0.05 * this.time_canvas.clientHeight)) {
         this.select(layer);
+        mouseover = true;
       }
     }
 
     // can't drag unselected
-    if (!this.selected_layer) {
-      return;
-    }
-
-    // edge case -- we have a selected layer, but not close enough
-    if (Math.abs(ev.offsetY - y_coord) > (0.05 * this.time_canvas.height)) {
+    if (!this.selected_layer || !mouseover) {
       return;
     }
 
@@ -579,8 +580,8 @@ class Player {
       }
     }
 
-    let cursor_x = Math.max(ev.clientX - this.cursor_canvas.width / 2, 0);
-    cursor_x = Math.min(cursor_x, rect.width - this.cursor_canvas.width );
+    let cursor_x = Math.max(ev.clientX - this.cursor_canvas.clientWidth / 2, 0);
+    cursor_x = Math.min(cursor_x, rect.width - this.cursor_canvas.clientWidth );
     this.cursor_preview.style.display = "block";
     this.cursor_preview.style.left = cursor_x + "px";
     this.cursor_preview.style.bottom = (rect.height) + "px";
@@ -696,9 +697,10 @@ class Player {
       if (!(this.selected_layer instanceof MoveableLayer)) {
         return;
       }
-      dragging = true;
       e.preventDefault();
       let f = this.selected_layer.getFrame(this.time);
+      if (!f) { return; }
+      dragging = true;
       base_x = e.offsetX * get_ratio(e.target) - f[0];
       base_y = e.offsetY * get_ratio(e.target) - f[1];
       window.addEventListener('mouseup', mouseup, {
@@ -847,11 +849,13 @@ class Player {
   loop(realtime) {
     // update canvas and time sizes
     {
-      this.canvas.width = this.canvas.clientWidth;
-      this.canvas.height = this.canvas.clientHeight;
+      this.canvas.width = this.canvas.clientWidth * dpr;
+      this.canvas.height = this.canvas.clientHeight * dpr;
+      this.ctx.scale(dpr, dpr);
     } {
-      this.time_canvas.width = this.time_canvas.clientWidth;
-      this.time_canvas.height = this.time_canvas.clientHeight;
+      this.time_canvas.width = this.time_canvas.clientWidth * dpr;
+      this.time_canvas.height = this.time_canvas.clientHeight * dpr;
+      this.time_ctx.scale(dpr, dpr);
     }
 
     for (let layer of this.layers) {
@@ -872,23 +876,23 @@ class Player {
       this.time %= this.total_time;
     }
     this.last_step = realtime;
-    this.time_ctx.clearRect(0, 0, this.time_canvas.width, this.time_canvas.height);
-    let x = this.time_canvas.width * this.time / this.total_time;
+    this.time_ctx.clearRect(0, 0, this.time_canvas.clientWidth, this.time_canvas.clientWidth);
+    let x = this.time_canvas.clientWidth * this.time / this.total_time;
     this.time_ctx.fillStyle = `rgb(210,210,210)`;
-    this.time_ctx.fillRect(x, 0, 2, this.time_canvas.height);
+    this.time_ctx.fillRect(x, 0, 2, this.time_canvas.clientHeight);
     this.time_ctx.font = "10px courier";
     this.time_ctx.fillText(this.time.toFixed(2), 5, 10);
     this.time_ctx.fillText(this.total_time.toFixed(2), 5, 20);
 
     if (this.aux_time > 0) {
-      let aux_x = this.time_canvas.width * this.aux_time / this.total_time;
+      let aux_x = this.time_canvas.clientWidth * this.aux_time / this.total_time;
       this.time_ctx.fillStyle = `rgb(110,110,110)`;
-      this.time_ctx.fillRect(aux_x, 0, 1, this.time_canvas.height);
+      this.time_ctx.fillRect(aux_x, 0, 1, this.time_canvas.clientHeight);
       this.render(this.cursor_ctx, this.aux_time, false);
     }
 
-    let y_inc = this.time_canvas.height / (this.layers.length + 1);
-    let y_coord = this.time_canvas.height - y_inc;
+    let y_inc = this.time_canvas.clientHeight / (this.layers.length + 1);
+    let y_coord = this.time_canvas.clientHeight - y_inc;
     for (let layer of this.layers) {
       let selected = this.selected_layer == layer;
       layer.render_time(this.time_ctx, y_coord, 3, selected);
