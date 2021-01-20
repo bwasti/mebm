@@ -105,16 +105,30 @@ class RenderedLayer {
 class MoveableLayer extends RenderedLayer {
   constructor(file) {
     super(file);
-    // all moveables 10 seconds default
-    this.total_time = 10 * 1000;
+    // all moveables 5 seconds default
+    this.total_time = 5 * 1000;
     this.frames = [];
-    for (let i = 0; i < this.total_time * fps; ++i) {
+    for (let i = 0; i < (this.total_time / 1000) * fps; ++i) {
       // x, y, scale, rot, anchor(bool)
       let f = new Float32Array(5);
       f[2] = 1;
       this.frames.push(f);
     }
     this.frames[0][4] = 1;
+  }
+
+  adjustTotalTime(diff) {
+    this.total_time += diff;
+    const num_frames = Math.round((this.total_time / 1000) * fps - this.frames.length);
+    if (num_frames > 0) {
+      for (let i = 0; i < num_frames; ++i) {
+        let f = new Float32Array(5);
+        f[2] = 1;
+        this.frames.push(f);
+      }
+    } else if (num_frames < 0) {
+      this.frames.splice(this.frames.length + num_frames, -num_frames);
+    }
   }
 
   // set index, k (of x, y, scale, rot) to val
@@ -464,8 +478,25 @@ class Player {
       once: true
     });
 
+    let y_inc = this.time_canvas.height / (this.layers.length + 1);
+    let y_coord = this.time_canvas.height;
+    let mouseover = false;
+    for (let layer of this.layers) {
+      y_coord -= y_inc;
+      if (layer.start_time > this.time) {
+        continue;
+      }
+      if (layer.start_time + layer.total_time < this.time) {
+        continue;
+      }
+      if (Math.abs(ev.offsetY - y_coord) < 0.05 * this.time_canvas.height) {
+        this.selected_layer = layer;
+        mouseover = true;
+      }
+    }
+
     // can't drag unselected
-    if (!this.selected_layer) {
+    if (!this.selected_layer || mouseover == false) {
       return;
     }
 
@@ -480,7 +511,7 @@ class Player {
         base_t = t;
         if (l instanceof MoveableLayer) {
           let diff = l.start_time - t;
-          l.total_time += diff;
+          l.adjustTotalTime(diff);
           l.start_time -= diff;
         } else {
           l.start_time += diff;
@@ -493,20 +524,19 @@ class Player {
         let diff = t - base_t;
         base_t = t;
         if (l instanceof MoveableLayer) {
-          l.total_time += diff;
+          l.adjustTotalTime(diff);
         } else {
           l.start_time += diff;
         }
       }
+    } else if (this.time < l.start_time + l.total_time && this.time > l.start_time) {
+      let base_t = this.time;
+      this.dragging = function(t) {
+        let diff = t - base_t;
+        base_t = t;
+        l.start_time += diff;
+      }
     }
-    //else if (this.time < l.start_time + l.total_time && this.time > l.start_time) {
-    //  let base_t = this.time;
-    //  this.dragging = function(t) {
-    //    let diff = t - base_t;
-    //    base_t = t;
-    //    l.start_time += diff;
-    //  }
-    //}
   }
 
   scrubMove(ev) {
@@ -524,7 +554,6 @@ class Player {
         document.body.style.cursor = "col-resize";
       }
     }
-
 
     let cursor_x = Math.max(ev.clientX - this.cursor_canvas.width / 2, 0);
     cursor_x = Math.min(cursor_x, rect.width - this.cursor_canvas.width );
