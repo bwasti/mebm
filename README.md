@@ -26,3 +26,8 @@ It works "better" on Safari (supports more formats), but it's less likely to cra
   - [ ] text color (easy)
   - [ ] opacity (easy)
   - [ ] rotation (medium)
+- UX
+  - [ ] make layers smaller
+  - [ ] make timeline clickable
+  - [ ] make timeline draggable
+  
