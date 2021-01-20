@@ -60,18 +60,25 @@ html, body {
 
 #header {
   text-align: center;
+  font-size: 12px;
 }
 
 a {
-  color: white;
+  color: rgb(210,210,210);
 }
 a:visited {
-  color: white;
+  color: rgb(210,210,210);
 }
 
 #header div {
-  padding: 4px;
   display: inline-block;
+  padding: 4px;
+  margin: 4px;
+}
+
+#header a {
+  float: right;
+  padding: 4px;
   margin: 4px;
 }
 

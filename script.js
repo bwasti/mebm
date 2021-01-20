@@ -960,9 +960,10 @@ function exportVideo(blob) {
   vid.controls = true;
   backgroundElem(vid);
   let h = document.getElementById('header');
-  let a = h.querySelector('a');
+  let a = h.querySelector('#download');
   if (!a) {
     a = document.createElement('a');
+    a.id = 'download';
     a.download = 'exported.webm';
     a.textContent = 'download';
   }
