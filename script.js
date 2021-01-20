@@ -840,6 +840,10 @@ window.addEventListener('keydown', function(ev) {
   }
 });
 
+window.onbeforeunload = function() {
+  return true;
+};
+
 function add_text() {
   let t = prompt("enter text");
   player.add(new TextLayer(t));
