@@ -126,16 +126,21 @@ class MoveableLayer extends RenderedLayer {
         f[2] = 1;
         this.frames.push(f);
       }
+      const anchor = this.nearestAnchor(this.total_time, false);
+      this.updateInterpolation(anchor);
     } else if (num_frames < 0) {
       this.frames.splice(this.frames.length + num_frames, -num_frames);
     }
   }
 
+  anchor(index) {
+    let f = this.frames[index];
+    f[3] = 1;
+  }
+
   // set index, k (of x, y, scale, rot) to val
   interpolate(index, k, val) {
     let f = this.frames[index];
-    // set as anchor
-    f[3] = 1;
     // find prev anchor
     let prev_idx = 0;
     let prev_val = val;
@@ -175,6 +180,14 @@ class MoveableLayer extends RenderedLayer {
 
   }
 
+  updateInterpolation(index) {
+    index = Math.max(index, 0);
+    let f = this.frames[index];
+    this.interpolate(index, 0, f[0]);
+    this.interpolate(index, 1, f[1]);
+    this.interpolate(index, 2, f[2]);
+  }
+
   getIndex(ref_time) {
     let time = ref_time - this.start_time;
     let index = Math.floor(time / 1000 * fps);
@@ -197,10 +210,7 @@ class MoveableLayer extends RenderedLayer {
     let i = this.getIndex(ref_time);
     this.frames[i][3] = 0;
     let prev_i = this.nearestAnchor(ref_time, false);
-    let prev_f = this.frames[prev_i];
-    this.interpolate(prev_i, 0, prev_f[0]);
-    this.interpolate(prev_i, 1, prev_f[1]);
-    this.interpolate(prev_i, 2, prev_f[2]);
+    this.updateInterpolation(prev_i);
   }
 
   update(change, ref_time) {
@@ -210,12 +220,15 @@ class MoveableLayer extends RenderedLayer {
     }
     let index = this.getIndex(ref_time);
     if (change.scale) {
+      this.anchor(index);
       this.interpolate(index, 2, f[2] * change.scale);
     }
     if (change.x) {
+      this.anchor(index);
       this.interpolate(index, 0, change.x);
     }
     if (change.y) {
+      this.anchor(index);
       this.interpolate(index, 1, change.y);
     }
   }
@@ -480,7 +493,6 @@ class Player {
 
     let y_inc = this.time_canvas.height / (this.layers.length + 1);
     let y_coord = this.time_canvas.height;
-    let mouseover = false;
     for (let layer of this.layers) {
       y_coord -= y_inc;
       if (layer.start_time > this.time) {
@@ -490,13 +502,12 @@ class Player {
         continue;
       }
       if (Math.abs(ev.offsetY - y_coord) < 0.05 * this.time_canvas.height) {
-        this.selected_layer = layer;
-        mouseover = true;
+        this.select(layer);
       }
     }
 
     // can't drag unselected
-    if (!this.selected_layer || mouseover == false) {
+    if (!this.selected_layer) {
       return;
     }
 

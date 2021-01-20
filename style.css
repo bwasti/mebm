@@ -85,11 +85,17 @@ a:visited {
   font-size: 12px;
   display: flex;
   padding: 4px;
+  height: 5vw;
 }
 
 #layers .preview_title {
   padding: 5px;
-  width: 50%;
+  width: 70%;
+}
+
+#layers .preview_thumb {
+  background: black;
+  width: 30%;
 }
 
 #layers .preview_title input {
@@ -102,11 +108,6 @@ a:visited {
 
 #layers .selected {
   border-left: solid rgb(210, 210, 210) 4px;
-}
-
-#layers .preview_thumb {
-  background: black;
-  width: 50%;
 }
 
 #foreground #time {
