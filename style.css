@@ -62,10 +62,10 @@ html, body {
   text-align: center;
 }
 
-#header a {
+a {
   color: white;
 }
-#header a:visited {
+a:visited {
   color: white;
 }
 
@@ -75,17 +75,21 @@ html, body {
   margin: 4px;
 }
 
-#header div:hover {
+#header div:hover,
+#layers div a:hover,
+#layers div canvas:hover {
   cursor: pointer;
 }
 
 #layers .preview {
+  font-size: 12px;
   display: flex;
   padding: 4px;
 }
 
 #layers .preview_title {
   padding: 5px;
+  width: 50%;
 }
 
 #layers div {

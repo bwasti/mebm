@@ -29,7 +29,21 @@ class RenderedLayer {
     this.thumb_canvas.height = this.thumb_canvas.clientHeight;
     this.thumb_ctx.clearRect(0, 0, this.thumb_canvas.width, this.thumb_canvas.height);
     this.render(this.thumb_ctx, ref_time);
-    this.title_div.textContent = "\"" + this.name + "\"";
+  }
+
+  setup_preview() {
+    let delete_option = document.createElement('a');
+    delete_option.textContent = '[x]';
+    delete_option.style.float = "right";
+    delete_option.addEventListener('click', (function() {
+      if (confirm("delete layer \""+this.name+"\"?")) {
+        this.player.remove(this);
+      }
+    }).bind(this));
+    this.title_div.appendChild(delete_option);
+    const desciption = document.createElement('div');
+    desciption.textContent = "\"" + this.name + "\"";
+    this.title_div.appendChild(desciption);
   }
 
   init(player, preview) {
@@ -40,6 +54,7 @@ class RenderedLayer {
     this.title_div = this.preview.querySelector('.preview_title');
     this.thumb_canvas = this.preview.querySelector('.preview_thumb');
     this.thumb_ctx = this.thumb_canvas.getContext('2d');
+    this.setup_preview();
   }
 
   render_time(ctx, y_coord, width, selected) {
@@ -52,9 +67,10 @@ class RenderedLayer {
       ctx.fillStyle = `rgb(110,110,110)`;
     }
     ctx.fillRect(start, y_coord - width / 2, length, width);
-    let end_width = width * 4;
-    ctx.fillRect(start, y_coord - end_width / 2, width, end_width);
-    ctx.fillRect(start + length - width, y_coord - end_width / 2, width, end_width);
+    let end_width = width * 6;
+    let tab_width = 2;
+    ctx.fillRect(start, y_coord - end_width / 2, tab_width, end_width);
+    ctx.fillRect(start + length - tab_width / 2, y_coord - end_width / 2, tab_width, end_width);
   }
 
   // default ignore drags, pinches
@@ -341,9 +357,6 @@ class VideoLayer extends RenderedLayer {
   }
 
   async convertToArrayBuffer() {
-    let title = this.preview.querySelector('.preview_title');
-    let thumb = this.preview.querySelector('.preview_thumb');
-    let thumb_ctx = thumb.getContext('2d');
     this.video.pause();
     let d = this.video.duration;
     for (let i = 0; i < d * fps; ++i) {
@@ -354,10 +367,12 @@ class VideoLayer extends RenderedLayer {
       }
       this.frames.push(frame);
       this.ctx.putImageData(frame, 0, 0);
-      this.drawScaled(this.ctx, thumb_ctx);
-      title.textContent = (100 * i / (d * fps)).toFixed(2) + "%";
+      this.drawScaled(this.ctx, this.thumb_ctx);
+      this.title_div.textContent = (100 * i / (d * fps)).toFixed(2) + "%";
     }
     this.ready = true;
+    this.title_div.innerHTML = "";
+    this.setup_preview();
   }
 
   render(ctx_out, ref_time) {
@@ -489,8 +504,6 @@ class Player {
     const cursor_text = cursor_prev.children[0];
     const cursor_canvas = cursor_prev.children[1];
     const cursor_ctx = cursor_canvas.getContext('2d');
-    console.log(time, cursor_canvas);
-    console.log(ev.target, rect);
     let cursor_x = Math.max(ev.clientX - cursor_canvas.width / 2, 0);
     cursor_x = Math.min(cursor_x, rect.width - cursor_canvas.width );
     cursor_prev.style.left = cursor_x + "px";
@@ -680,6 +693,18 @@ class Player {
     this.deselect();
     this.selected_layer = layer;
     this.selected_layer.preview.classList.toggle('selected');
+  }
+
+  remove(layer) {
+    const idx = this.layers.indexOf(layer);
+    const len = this.layers.length;
+    if (idx > -1) {
+      this.layers.splice(idx, 1);
+      let layer_picker = document.getElementById('layers');
+      // divs are reversed
+      layer_picker.children[len - idx - 1].remove();
+    }
+    this.total_time = 0;
   }
 
   add(layer) {
