@@ -119,18 +119,19 @@ class MoveableLayer extends RenderedLayer {
 
   adjustTotalTime(diff) {
     this.total_time += diff;
-    const num_frames = Math.round((this.total_time / 1000) * fps - this.frames.length);
+    const num_frames = Math.floor((this.total_time / 1000) * fps - this.frames.length);
+    const anchor = this.nearestAnchor(this.total_time, false);
     if (num_frames > 0) {
       for (let i = 0; i < num_frames; ++i) {
         let f = new Float32Array(5);
         f[2] = 1;
         this.frames.push(f);
       }
-      const anchor = this.nearestAnchor(this.total_time, false);
-      this.updateInterpolation(anchor);
     } else if (num_frames < 0) {
-      this.frames.splice(this.frames.length + num_frames, -num_frames);
+      // prevent overflow
+      this.frames.splice(this.frames.length + num_frames + 1, 1 - num_frames);
     }
+    this.updateInterpolation(anchor);
   }
 
   anchor(index) {
@@ -166,14 +167,15 @@ class MoveableLayer extends RenderedLayer {
     }
 
     let prev_range = index - prev_idx;
+    const eps = 1e-9;
     for (let i = 0; i <= prev_range; ++i) {
-      let s = i / prev_range;
+      let s = i / (prev_range + eps);
       let v = (1 - s) * val + s * prev_val;
       this.frames[index - i][k] = v;
     }
     let next_range = next_idx - index;
     for (let i = 0; i <= next_range; ++i) {
-      let s = i / next_range;
+      let s = i / (next_range + eps);
       let v = (1 - s) * val + s * next_val;
       this.frames[index + i][k] = v;
     }
