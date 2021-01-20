@@ -29,7 +29,7 @@ class RenderedLayer {
     this.thumb_canvas.height = this.thumb_canvas.clientHeight;
     this.thumb_ctx.clearRect(0, 0, this.thumb_canvas.width, this.thumb_canvas.height);
     this.render(this.thumb_ctx, ref_time);
-    this.title_div.textContent = this.name;
+    this.title_div.textContent = "\"" + this.name + "\"";
   }
 
   init(player, preview) {
@@ -42,14 +42,19 @@ class RenderedLayer {
     this.thumb_ctx = this.thumb_canvas.getContext('2d');
   }
 
-  render_time(ctx) {
+  render_time(ctx, y_coord, width, selected) {
     let scale = ctx.canvas.width / this.player.total_time;
     let start = scale * this.start_time;
     let length = scale * this.total_time;
-    let half = ctx.canvas.height / 2;
-    let width = 2;
-    ctx.fillStyle = `rgb(210,210,210)`;
-    ctx.fillRect(start, half - width / 2, length, width);
+    if (selected) {
+      ctx.fillStyle = `rgb(210,210,210)`;
+    } else {
+      ctx.fillStyle = `rgb(110,110,110)`;
+    }
+    ctx.fillRect(start, y_coord - width / 2, length, width);
+    let end_width = width * 4;
+    ctx.fillRect(start, y_coord - end_width / 2, width, end_width);
+    ctx.fillRect(start + length - width, y_coord - end_width / 2, width, end_width);
   }
 
   // default ignore drags, pinches
@@ -185,17 +190,16 @@ class MoveableLayer extends RenderedLayer {
   }
 
   // moveable layers have anchor points we'll want to show
-  render_time(ctx) {
-    super.render_time(ctx);
+  render_time(ctx, y_coord, base_width, selected) {
+    super.render_time(ctx, y_coord, base_width, selected);
     let scale = ctx.canvas.width / this.player.total_time;
-    let half = ctx.canvas.height / 2;
-    let width = 16;
+    let width = 4 * base_width;
     for (let i = 0; i < this.frames.length; ++i) {
       let f = this.frames[i];
       if (f[3]) {
         let anchor_x = this.start_time + 1000 * (i / fps);
         ctx.fillStyle = `rgb(100,210,255)`;
-        ctx.fillRect(scale * anchor_x, half - width / 2, 3, width);
+        ctx.fillRect(scale * anchor_x, y_coord - width / 2, 3, width);
       }
     }
   }
@@ -203,15 +207,19 @@ class MoveableLayer extends RenderedLayer {
   nearestAnchor(time, fwd) {
     if (this.getFrame(time)) {
       let i = this.getIndex(time);
-      while (i >= 0 && i < this.frames.length - 1) {
+      let inc = function() {
         if (fwd) {
           i++;
         } else {
           i--;
         }
+      };
+      inc();
+      while (i >= 0 && i < this.frames.length) {
         if (this.frames[i][3]) {
           return i;
         }
+        inc();
       }
     }
     return -1;
@@ -241,8 +249,6 @@ class ImageLayer extends MoveableLayer {
     let f = this.getFrame(ref_time);
     if (f) {
       let scale = f[2];
-      //let x = f[0];
-      //let y = f[1];
       let x = f[0] + this.canvas.width / 2 - this.width / 2;
       let y = f[1] + this.canvas.height / 2 - this.height / 2;
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -361,7 +367,7 @@ class VideoLayer extends RenderedLayer {
     let time = ref_time - this.start_time;
     let index = Math.floor(time / 1000 * fps);
     if (index < this.frames.length) {
-      let frame = this.frames[index];
+      const frame = this.frames[index];
       this.ctx.putImageData(frame, 0, 0);
       this.drawScaled(this.ctx, ctx_out);
     }
@@ -382,6 +388,8 @@ class Player {
     this.total_time = 0;
     this.last_step = null;
     this.time = 0;
+    // for preview
+    this.aux_time = 0;
     this.canvas = document.createElement('canvas');
     this.ctx = this.canvas.getContext('2d');
     this.canvas_holder = document.getElementById('canvas');
@@ -390,12 +398,20 @@ class Player {
     this.time_canvas = document.createElement('canvas');
     this.time_canvas.addEventListener('mousedown', this.scrubStart.bind(this));
     this.time_canvas.addEventListener('mousemove', this.scrubMove.bind(this));
+    this.time_canvas.addEventListener('mouseleave', this.scrubEnd.bind(this));
     this.time_ctx = this.time_canvas.getContext('2d');
     this.time_holder.appendChild(this.time_canvas);
     window.requestAnimationFrame(this.loop.bind(this));
 
     this.setupPinchHadler();
     this.setupDragHandler();
+  }
+
+  intersectsTime(time, query) {
+    if (!query) {
+      query = this.time;
+    }
+    return Math.abs(query - time) / this.total_time < 0.01;
   }
 
   scrubStart(ev) {
@@ -411,20 +427,11 @@ class Player {
     if (!this.selected_layer) {
       return;
     }
-    // check if we're dragging anything
-    let tol = rect.height * click_tolerance / 2;
-    // location of the bar
-    let maxY = rect.height / 2 + tol;
-    let minY = rect.height / 2 - tol;
-    if (ev.offsetY < minY || ev.offsetY > maxY) {
-      return;
-    }
 
     // dragging something
     let l = this.selected_layer;
-    tol = 0.03 * this.time;
 
-    if (Math.abs(this.time - l.start_time) < tol) {
+    if (this.intersectsTime(l.start_time)) {
       this.time = l.start_time;
       let base_t = this.time;
       this.dragging = function(t) {
@@ -438,7 +445,7 @@ class Player {
           l.start_time += diff;
         }
       }
-    } else if (Math.abs(this.time - (l.start_time + l.total_time)) < tol) {
+    } else if (this.intersectsTime(l.start_time + l.total_time)) {
       this.time = l.start_time + l.total_time;
       let base_t = this.time;
       this.dragging = function(t) {
@@ -450,31 +457,66 @@ class Player {
           l.start_time += diff;
         }
       }
-    } else if (this.time < l.start_time + l.total_time && this.time > l.start_time) {
-      let base_t = this.time;
-      this.dragging = function(t) {
-        let diff = t - base_t;
-        base_t = t;
-        l.start_time += diff;
-      }
     }
+    //else if (this.time < l.start_time + l.total_time && this.time > l.start_time) {
+    //  let base_t = this.time;
+    //  this.dragging = function(t) {
+    //    let diff = t - base_t;
+    //    base_t = t;
+    //    l.start_time += diff;
+    //  }
+    //}
   }
 
   scrubMove(ev) {
-    if (!this.scrubbing) {
-      return;
-    }
     let rect = this.time_holder.getBoundingClientRect();
-    this.time = ev.offsetX / rect.width * this.total_time;
+    let time = ev.offsetX / rect.width * this.total_time;
+
+    document.body.style.cursor = "default";
+
+    if (this.selected_layer) {
+      let l = this.selected_layer;
+      if (this.intersectsTime(l.start_time, time)) {
+        document.body.style.cursor = "col-resize";
+      }
+      if (this.intersectsTime(l.start_time + l.total_time, time)) {
+        document.body.style.cursor = "col-resize";
+      }
+    }
+
+    const cursor_prev = document.getElementById('cursor_preview');
+    cursor_prev.style.display = "block";
+    const cursor_text = cursor_prev.children[0];
+    const cursor_canvas = cursor_prev.children[1];
+    const cursor_ctx = cursor_canvas.getContext('2d');
+    console.log(time, cursor_canvas);
+    console.log(ev.target, rect);
+    let cursor_x = Math.max(ev.clientX - cursor_canvas.width / 2, 0);
+    cursor_x = Math.min(cursor_x, rect.width - cursor_canvas.width );
+    cursor_prev.style.left = cursor_x + "px";
+    cursor_prev.style.bottom = (rect.height) + "px";
+    this.aux_time = time;
+    this.render(cursor_ctx, this.aux_time, false);
+    cursor_text.textContent = this.aux_time.toFixed(2) + "/" + this.total_time.toFixed(2)
+    
+
+    if (this.scrubbing) {
+      this.time = time;
+    }
+
     if (this.dragging) {
       this.dragging(this.time);
     }
   }
 
   scrubEnd(ev) {
+    let cursor_prev = document.getElementById('cursor_preview');
+    document.body.style.cursor = "default";
+    cursor_prev.style.display = "none";
     this.scrubbing = false;
     this.dragging = null;
     this.total_time = 0;
+    this.aux_time = 0;
   }
 
   setupPinchHadler() {
@@ -493,7 +535,7 @@ class Player {
 
     let wheel = function(e) {
       e.preventDefault();
-      if (e.ctrlKey) {
+      if (e.ctrlKey || e.shiftKey) {
         let scale = 1;
         scale -= e.deltaY * 0.01;
         // Your zoom/scale factor
@@ -686,6 +728,22 @@ class Player {
     this.onend_callback = callback;
   }
 
+  render(ctx, time, update_preview) {
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+    for (let layer of this.layers) {
+      if (layer.start_time > time) {
+        continue;
+      }
+      if (layer.start_time + layer.total_time < time) {
+        continue;
+      }
+      layer.render(ctx, time);
+      if (update_preview) {
+        layer.show_preview(time);
+      }
+    }
+  }
+
   loop(realtime) {
     // update canvas and time sizes
     {
@@ -715,30 +773,30 @@ class Player {
     this.last_step = realtime;
     this.time_ctx.clearRect(0, 0, this.time_canvas.width, this.time_canvas.height);
     let x = this.time_canvas.width * this.time / this.total_time;
-    if (this.selected_layer) {
-      this.selected_layer.render_time(this.time_ctx);
-    }
     this.time_ctx.fillStyle = `rgb(210,210,210)`;
     this.time_ctx.fillRect(x, 0, 2, this.time_canvas.height);
+    this.time_ctx.font = "10px courier";
     this.time_ctx.fillText(this.time.toFixed(2), 5, 10);
     this.time_ctx.fillText(this.total_time.toFixed(2), 5, 20);
 
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    if (this.aux_time > 0) {
+      let aux_x = this.time_canvas.width * this.aux_time / this.total_time;
+      this.time_ctx.fillStyle = `rgb(110,110,110)`;
+      this.time_ctx.fillRect(aux_x, 0, 1, this.time_canvas.height);
+    }
+
+    let y_inc = this.time_canvas.height / (this.layers.length + 1);
+    let y_coord = this.time_canvas.height - y_inc;
     for (let layer of this.layers) {
+      let selected = this.selected_layer == layer;
+      layer.render_time(this.time_ctx, y_coord, 3, selected);
+      y_coord -= y_inc;
       if (this.selected_layer == layer && this.update) {
         layer.update(this.update, this.time);
         this.update = null;
       }
-      if (layer.start_time > this.time) {
-        continue;
-      }
-      if (layer.start_time + layer.total_time < this.time) {
-        continue;
-      }
-      layer.render(this.ctx, this.time);
-      layer.show_preview(this.time);
     }
-
+    this.render(this.ctx, this.time, true);
     window.requestAnimationFrame(this.loop.bind(this));
   }
 
@@ -755,7 +813,6 @@ window.addEventListener('drop', function(ev) {
       if (ev.dataTransfer.items[i].kind === 'file') {
         var file = ev.dataTransfer.items[i].getAsFile();
         if (file.type.indexOf('video') >= 0) {
-          //new VideoLayer(file);
           player.add(new VideoLayer(file));
         } else if (file.type.indexOf('image') >= 0) {
           player.add(new ImageLayer(file));

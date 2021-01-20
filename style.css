@@ -22,7 +22,7 @@ html, body {
 }
 
 #foreground {
-  z-index: 1000000;
+  z-index: 5;
   background: black;
 }
 
@@ -43,7 +43,19 @@ html, body {
   width: 30%;
   overflow: scroll;
   color: rgb(210,210,210);
-  font-family: Helvetica;
+  font-family: courier;
+}
+
+#cursor_preview {
+  display: none;
+  position: absolute;
+  background: black;
+  z-index: 6;
+  text-align:center;
+  color: white;
+  font-size: 10px;
+  color: rgb(210,210,210);
+  font-family: courier;
 }
 
 #header {
@@ -76,9 +88,12 @@ html, body {
   padding: 5px;
 }
 
+#layers div {
+  border-left: solid rgba(210, 210, 210, 0) 4px;
+}
 
 #layers .selected {
-  border-left: solid rgb(250, 230, 91) 4px;
+  border-left: solid rgb(210, 210, 210) 4px;
 }
 
 #layers .preview_thumb {
