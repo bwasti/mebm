@@ -45,6 +45,13 @@ class RenderedLayer {
     const description = document.createElement('div');
     description.classList.toggle('description');
     description.textContent = "\"" + this.name + "\"";
+    description.addEventListener('click', (function(e) {
+      const new_text = prompt("enter new text");
+      if (new_text) {
+        this.name = new_text;
+        description.textContent = "\"" + this.name + "\"";
+      }
+    }).bind(this));
     this.title_div.appendChild(description);
   }
 
@@ -320,22 +327,12 @@ class TextLayer extends MoveableLayer {
       name: text
     };
     super(f);
-    this.text = text;
     this.color = "#ffffff";
     this.ready = true;
   }
 
   init(player, preview) {
     super.init(player, preview);
-    let description = this.title_div.querySelector('.description');
-    description.addEventListener('click', (function(e) {
-      const new_text = prompt("new text");
-      if (new_text) {
-        this.text = new_text;
-        this.name = new_text;
-        description.textContent = "\"" + this.name + "\"";
-      }
-    }).bind(this));
     let color_picker = document.createElement('input');
     color_picker.type = "color";
     color_picker.value = this.color;
@@ -350,7 +347,7 @@ class TextLayer extends MoveableLayer {
     if (f) {
       let scale = f[2];
       this.ctx.font = Math.floor(scale * 30) + "px Georgia";
-      let rect = this.ctx.measureText(this.text);
+      let rect = this.ctx.measureText(this.name);
       this.width = rect.width;
       this.height = rect.actualBoundingBoxAscent + rect.actualBoundingBoxDescent;
       let x = f[0] + this.canvas.width / 2;
@@ -359,7 +356,7 @@ class TextLayer extends MoveableLayer {
       this.ctx.shadowBlur = 7;
       this.ctx.fillStyle = this.color;
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.ctx.fillText(this.text, x, y);
+      this.ctx.fillText(this.name, x, y);
       this.drawScaled(this.ctx, ctx_out);
     }
   }
@@ -961,7 +958,6 @@ window.addEventListener('drop', function(ev) {
       let item = ev.dataTransfer.items[i];
       if (item.kind === 'file') {
         const file = item.getAsFile();
-        console.log(file);
         addFile(file);
       } else if (item.kind === 'string' && item.type === 'text/uri-list') {
         item.getAsString(addURI);
@@ -971,7 +967,6 @@ window.addEventListener('drop', function(ev) {
 });
 
 window.addEventListener('paste', function(ev) {
-  console.log(ev);
   let uri = (event.clipboardData || window.clipboardData).getData('text');
   addURI(uri);
 });
