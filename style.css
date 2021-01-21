@@ -128,6 +128,7 @@ a:visited {
 
 #layers .preview {
   font-size: 12px;
+  word-break: break-all;
   display: flex;
   padding: 4px;
   height: 5vw;

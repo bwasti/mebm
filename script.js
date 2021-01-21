@@ -926,16 +926,54 @@ function addFile(file) {
   }
 }
 
+async function addURI(uri) {
+  // safari has a bug here
+  if (!uri) { return; }
+  let response = await fetch(uri);
+  let data = await response.blob();
+	let extension = uri.split(/[#?]/)[0].split('.').pop().trim();
+  // todo: add more types
+  const ext_map = {
+		'mp4': 'video/mp4',
+		'mpeg4': 'video/mp4',
+		'mpeg': 'video/mpeg',
+		'ogv': 'video/ogg',
+		'webm': 'video/webm',
+		'gif': 'image/gif',
+		'jpg': 'image/jpeg',
+		'jpeg': 'image/jpeg',
+		'png': 'image/png',
+		'webp': 'image/webp',
+	};
+  let metadata = {
+    type: ext_map[extension]
+  };
+  let segs = uri.split("/");
+  let name = segs[segs.length - 1];
+  let file = new File([data], name, metadata);
+  addFile(file);
+}
+
 window.addEventListener('drop', function(ev) {
   ev.preventDefault();
   if (ev.dataTransfer.items) {
     for (var i = 0; i < ev.dataTransfer.items.length; i++) {
-      if (ev.dataTransfer.items[i].kind === 'file') {
-        const file = ev.dataTransfer.items[i].getAsFile();
+      let item = ev.dataTransfer.items[i];
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        console.log(file);
         addFile(file);
+      } else if (item.kind === 'string' && item.type === 'text/uri-list') {
+        item.getAsString(addURI);
       }
     }
   }
+});
+
+window.addEventListener('paste', function(ev) {
+  console.log(ev);
+  let uri = (event.clipboardData || window.clipboardData).getData('text');
+  addURI(uri);
 });
 
 // TODO show something
@@ -953,13 +991,27 @@ window.addEventListener('keydown', function(ev) {
     player.next();
   } else if (ev.code == "Backspace") {
     player.deleteAnchor();
+  } else if (ev.code == "KeyI") {
+    if (ev.ctrlKey) {
+      let uris = prompt("paste comma separated list of URLs").replace(/ /g,'');
+      let encoded = encodeURIComponent(uris);
+      location.hash = encoded;
+    }
   }
 });
 
 window.addEventListener('load', function() {
+  if (location.hash) {
+    let l = decodeURIComponent(location.hash.substring(1));
+    for (let uri of l.split(',')) {
+      addURI(uri);
+    }
+    location.hash = "";
+    return;
+  }
   let localStorage = window.localStorage;
   let seen = localStorage.getItem('_seen');
-  if (!seen) {
+  if (!seen || false) {
     const div = document.createElement('div');
     const close = document.createElement('a');
     const text = document.createElement('p');
@@ -972,18 +1024,20 @@ window.addEventListener('load', function() {
     text.innerHTML = `welcome!
       <br>
       <br>
-      more usage information can be found <a href="https://github.com/bwasti/mebm" target="_blank">here</a>
+      to start, drag in or paste URLs to videos and images.
+      <br>
+			more information and a demo can be found <a href="https://github.com/bwasti/mebm" target="_blank">here</a>
       ` ;
     vid.src = "https://github.com/bwasti/mebm/blob/main/README_assets/usage.mp4?raw=true";
     vid.setAttribute('autoplay', true);
     vid.setAttribute('loop', true);
     vid.setAttribute('playsinline', true);
     vid.setAttribute('muted', true);
-    //vid.setAttribute('controls', true);
     vid.style.width = '100%';
     div.appendChild(close);
     div.appendChild(text);
-    div.appendChild(vid);
+    // TODO: consider adding back
+    //div.appendChild(vid);
     div.classList.toggle('popup');
     document.body.appendChild(div);
     localStorage.setItem('_seen', 'true');
