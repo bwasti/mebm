@@ -24,6 +24,7 @@ class RenderedLayer {
   resize() {
     this.thumb_canvas.width = this.thumb_canvas.clientWidth * dpr;
     this.thumb_canvas.height = this.thumb_canvas.clientHeight * dpr;
+    this.thumb_ctx.scale(dpr, dpr);
   }
 
   show_preview(ref_time) {
@@ -31,7 +32,6 @@ class RenderedLayer {
       return;
     }
     this.thumb_ctx.clearRect(0, 0, this.thumb_canvas.clientWidth, this.thumb_canvas.clientHeight);
-    this.thumb_ctx.scale(dpr, dpr);
     this.render(this.thumb_ctx, ref_time);
   }
 
