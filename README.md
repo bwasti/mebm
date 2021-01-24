@@ -31,7 +31,6 @@ Audio is not yet supported, but is planned.
 - timeline
   - [ ] allow extending beyond current max time (medium)
   - [ ] split at play head (medium)
-  - [ ] mouseover preview safari fix (hard)
 - file management
   - [ ] error on bad type (easy)
   - [ ] animated .gif support
@@ -41,6 +40,10 @@ Audio is not yet supported, but is planned.
   - [ ] face tracking (medium/easy)
   - [ ] opacity (easy)
   - [ ] rotation (medium)
+- compatibility
+  - [ ] chrome export bug workaround
+  - [ ] mouseover preview safari fix
+  - [ ] mobile touch events
 - code
   - [ ] refactor/simplify MoveableLayer this.frames
   - [ ] make video a MoveableLayer
