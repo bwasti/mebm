@@ -1011,7 +1011,7 @@ let player = new Player();
 
 function addFile(file) {
   if (file.type.indexOf('video') >= 0) {
-    player.add(new AudioLayer(file));
+    //player.add(new AudioLayer(file));
     player.add(new VideoLayer(file));
   } else if (file.type.indexOf('image') >= 0) {
     player.add(new ImageLayer(file));
