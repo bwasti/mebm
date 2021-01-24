@@ -37,7 +37,7 @@ class RenderedLayer {
     delete_option.textContent = '[x]';
     delete_option.style.float = "right";
     delete_option.addEventListener('click', (function() {
-      if (confirm("delete layer \""+this.name+"\"?")) {
+      if (confirm("delete layer \"" + this.name + "\"?")) {
         this.player.remove(this);
       }
     }).bind(this));
@@ -451,8 +451,10 @@ class VideoLayer extends RenderedLayer {
 }
 
 var AudioContext = window.AudioContext // Default
-    || window.webkitAudioContext // Safari and old versions of Chrome
-    || false; 
+  ||
+  window.webkitAudioContext // Safari and old versions of Chrome
+  ||
+  false;
 class AudioLayer extends RenderedLayer {
   constructor(file) {
     super(file);
@@ -469,7 +471,9 @@ class AudioLayer extends RenderedLayer {
         this.audio_buffer = aud_buffer;
         this.total_time = this.audio_buffer.duration * 1000;
         this.ready = true;
-      }, function(e) { console.log(e); });
+      }, function(e) {
+        console.log(e);
+      });
     }).bind(this));
     this.reader.readAsArrayBuffer(file);
   }
@@ -481,7 +485,7 @@ class AudioLayer extends RenderedLayer {
     this.source = this.audio_ctx.createBufferSource();
     this.source.buffer = this.audio_buffer;
     this.source.connect(this.audio_ctx.destination);
-    this.source.onended = (function(){
+    this.source.onended = (function() {
       this.playing = false;
     }).bind(this);
   }
@@ -518,7 +522,7 @@ class AudioLayer extends RenderedLayer {
     this.last_time = now;
     this.last_ref_time = ref_time;
     if (restart) {
-      if (!this.source || 
+      if (!this.source ||
         (this.source.playbackState == this.source.FINISHED_STATE) ||
         (this.source.playbackState == this.source.PLAYING_STATE)) {
         this.init_audio();
@@ -669,14 +673,14 @@ class Player {
     }
 
     let cursor_x = Math.max(ev.clientX - this.cursor_canvas.clientWidth / 2, 0);
-    cursor_x = Math.min(cursor_x, rect.width - this.cursor_canvas.clientWidth );
+    cursor_x = Math.min(cursor_x, rect.width - this.cursor_canvas.clientWidth);
     this.cursor_preview.style.display = "block";
     this.cursor_preview.style.left = cursor_x + "px";
     this.cursor_preview.style.bottom = (rect.height) + "px";
 
     this.aux_time = time;
     this.cursor_text.textContent = this.aux_time.toFixed(2) + "/" + this.total_time.toFixed(2)
-    
+
 
     if (this.scrubbing) {
       this.time = time;
@@ -791,7 +795,9 @@ class Player {
       }
       e.preventDefault();
       let f = this.selected_layer.getFrame(this.time);
-      if (!f) { return; }
+      if (!f) {
+        return;
+      }
       dragging = true;
       base_x = e.offsetX * get_ratio(e.target) - f[0];
       base_y = e.offsetY * get_ratio(e.target) - f[1];
@@ -1014,23 +1020,25 @@ function addFile(file) {
 
 async function addURI(uri) {
   // safari has a bug here
-  if (!uri) { return; }
+  if (!uri) {
+    return;
+  }
   let response = await fetch(uri);
   let data = await response.blob();
-	let extension = uri.split(/[#?]/)[0].split('.').pop().trim();
+  let extension = uri.split(/[#?]/)[0].split('.').pop().trim();
   // todo: add more types
   const ext_map = {
-		'mp4': 'video/mp4',
-		'mpeg4': 'video/mp4',
-		'mpeg': 'video/mpeg',
-		'ogv': 'video/ogg',
-		'webm': 'video/webm',
-		'gif': 'image/gif',
-		'jpg': 'image/jpeg',
-		'jpeg': 'image/jpeg',
-		'png': 'image/png',
-		'webp': 'image/webp',
-	};
+    'mp4': 'video/mp4',
+    'mpeg4': 'video/mp4',
+    'mpeg': 'video/mpeg',
+    'ogv': 'video/ogg',
+    'webm': 'video/webm',
+    'gif': 'image/gif',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'webp': 'image/webp',
+  };
   let metadata = {
     type: ext_map[extension]
   };
@@ -1078,7 +1086,7 @@ window.addEventListener('keydown', function(ev) {
     player.deleteAnchor();
   } else if (ev.code == "KeyI") {
     if (ev.ctrlKey) {
-      let uris = prompt("paste comma separated list of URLs").replace(/ /g,'');
+      let uris = prompt("paste comma separated list of URLs").replace(/ /g, '');
       let encoded = encodeURIComponent(uris);
       location.hash = encoded;
     }
@@ -1112,7 +1120,7 @@ window.addEventListener('load', function() {
       to start, drag in or paste URLs to videos and images.
       <br>
 			more information and a demo can be found <a href="https://github.com/bwasti/mebm" target="_blank">here</a>
-      ` ;
+      `;
     vid.src = "https://github.com/bwasti/mebm/blob/main/README_assets/usage.mp4?raw=true";
     vid.setAttribute('autoplay', true);
     vid.setAttribute('loop', true);
@@ -1145,6 +1153,7 @@ function exportVideo(blob) {
   vid.currentTime = Number.MAX_SAFE_INTEGER;
   backgroundElem(vid);
   let extension = blob.type.split(';')[0].split('/')[1];
+
   function make_a() {
     let h = document.getElementById('header');
     let a = h.querySelector('#download');
@@ -1158,7 +1167,9 @@ function exportVideo(blob) {
     document.getElementById('header').appendChild(a);
   }
   vid.ontimeupdate = function() {
-    this.ontimeupdate = ()=>{return;}
+    this.ontimeupdate = () => {
+      return;
+    }
     make_a();
     vid.currentTime = 0;
   }
@@ -1177,7 +1188,7 @@ function upload() {
 
 function getSupportedMimeTypes() {
   const VIDEO_TYPES = [
-    "webm", 
+    "webm",
     "ogg",
     "mp4",
     "x-matroska"
@@ -1200,15 +1211,15 @@ function getSupportedMimeTypes() {
   VIDEO_TYPES.forEach((videoType) => {
     const type = `video/${videoType}`;
     VIDEO_CODECS.forEach((codec) => {
-        const variations = [
+      const variations = [
         `${type};codecs=${codec}`,
         `${type};codecs:${codec}`,
         `${type};codecs=${codec.toUpperCase()}`,
         `${type};codecs:${codec.toUpperCase()}`
       ]
       variations.forEach(variation => {
-        if(MediaRecorder.isTypeSupported(variation)) 
-            supportedTypes.push(variation);
+        if (MediaRecorder.isTypeSupported(variation))
+          supportedTypes.push(variation);
       })
     });
     if (MediaRecorder.isTypeSupported(type)) supportedTypes.push(type);
@@ -1219,7 +1230,7 @@ function getSupportedMimeTypes() {
 function download() {
   if (player.layers.length == 0) {
     alert("nothing to export");
-    return; 
+    return;
   }
   const e = document.getElementById('export');
   const e_text = e.textContent;
