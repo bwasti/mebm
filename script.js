@@ -1141,7 +1141,6 @@ window.addEventListener('load', function() {
     const div = document.createElement('div');
     const close = document.createElement('a');
     const text = document.createElement('p');
-    const vid = document.createElement('video');
     close.addEventListener('click', function() {
       div.remove();
     });
@@ -1154,16 +1153,8 @@ window.addEventListener('load', function() {
       <br>
       more information and a demo can be found <a href="https://github.com/bwasti/mebm" target="_blank">here</a>
       `;
-    vid.src = "https://github.com/bwasti/mebm/blob/main/README_assets/usage.mp4?raw=true";
-    vid.setAttribute('autoplay', true);
-    vid.setAttribute('loop', true);
-    vid.setAttribute('playsinline', true);
-    vid.setAttribute('muted', true);
-    vid.style.width = '100%';
     div.appendChild(close);
     div.appendChild(text);
-    // TODO: consider adding back
-    //div.appendChild(vid);
     div.classList.toggle('popup');
     document.body.appendChild(div);
     localStorage.setItem('_seen', 'true');
