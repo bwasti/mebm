@@ -613,7 +613,7 @@ class Player {
     this.time_holder = document.getElementById('time');
     this.time_canvas = document.createElement('canvas');
     this.time_canvas.addEventListener('pointerdown', this.scrubStart.bind(this));
-    this.time_canvas.addEventListener('pointermove', this.scrubMove.bind(this));
+    this.time_canvas.addEventListener('pointermove', this.scrubMove.bind(this), {passive:false});
     this.time_canvas.addEventListener('pointerleave', this.scrubEnd.bind(this));
     this.time_ctx = this.time_canvas.getContext('2d');
     this.time_holder.appendChild(this.time_canvas);
@@ -714,6 +714,8 @@ class Player {
   }
 
   scrubMove(ev) {
+    ev.preventDefault();
+    ev.stopPropagation();
     let rect = this.time_holder.getBoundingClientRect();
     let time = ev.offsetX / rect.width * this.total_time;
 
@@ -786,12 +788,14 @@ class Player {
     }
     // safari
     let gesturestart = function(e) {
+      this.gesturing = true;
       e.preventDefault();
       gestureStartRotation = e.rotation;
       gestureStartScale = e.scale;
     };
     let gesturechange = function(e) {
       e.preventDefault();
+      e.stopPropagation();
       let rotation = e.rotation - gestureStartRotation;
       let scale = e.scale / gestureStartScale;
       gestureStartRotation = e.rotation;
@@ -799,6 +803,7 @@ class Player {
       callback(scale, rotation);
     };
     let gestureend = function(e) {
+      this.gesturing = false;
       e.preventDefault();
     };
     elem.addEventListener('gesturestart', gesturestart.bind(this));
@@ -863,6 +868,9 @@ class Player {
       });
     }
     let pointermove = function(e) {
+      if (this.gesturing) { return; }
+      e.preventDefault(); 
+      e.stopPropagation();
       if (dragging) {
         let dx = e.offsetX * get_ratio(e.target) - base_x;
         let dy = e.offsetY * get_ratio(e.target) - base_y;
@@ -870,7 +878,7 @@ class Player {
       }
     }
     elem.addEventListener('pointerdown', pointerdown.bind(this));
-    elem.addEventListener('pointermove', pointermove.bind(this));
+    elem.addEventListener('pointermove', pointermove.bind(this), {passive:false});
     let deleter = function() {
       elem.removeEventListener('pointerdown', pointerdown);
       elem.removeEventListener('pointermove', pointermove);
@@ -1003,22 +1011,18 @@ class Player {
 
   resize() {
     // update canvas and time sizes
-    {
-      this.canvas.width = this.canvas.clientWidth * dpr;
-      this.canvas.height = this.canvas.clientHeight * dpr;
-      this.ctx.scale(dpr, dpr);
-    } {
-      this.time_canvas.width = this.time_canvas.clientWidth * dpr;
-      this.time_canvas.height = this.time_canvas.clientHeight * dpr;
-      this.time_ctx.scale(dpr, dpr);
-    }
+    this.canvas.width = this.canvas.clientWidth * dpr;
+    this.canvas.height = this.canvas.clientHeight * dpr;
+    this.ctx.scale(dpr, dpr);
+    this.time_canvas.width = this.time_canvas.clientWidth * dpr;
+    this.time_canvas.height = this.time_canvas.clientHeight * dpr;
+    this.time_ctx.scale(dpr, dpr);
     for (let layer of this.layers) {
       layer.resize();
     }
   }
 
   loop(realtime) {
-
     for (let layer of this.layers) {
       if (layer.start_time + layer.total_time > this.total_time) {
         this.total_time = layer.start_time + layer.total_time;
@@ -1189,6 +1193,12 @@ window.addEventListener('load', function() {
     document.body.appendChild(div);
     localStorage.setItem('_seen', 'true');
   }
+  // fix mobile touch
+  document.getElementById('layer_holder').addEventListener("touchmove", function (e) {
+    e.stopPropagation();
+    //e.preventDefault();
+  }, { passive: false });
+
 });
 
 window.addEventListener('beforeunload', function() {
@@ -1198,6 +1208,10 @@ window.addEventListener('beforeunload', function() {
 window.addEventListener('resize', function() {
   player.resize();
 });
+
+window.addEventListener("touchmove", function (e) {
+  e.preventDefault();
+}, { passive: false });
 
 function add_text() {
   let t = prompt("enter text");
