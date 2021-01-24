@@ -318,7 +318,7 @@ class ImageLayer extends MoveableLayer {
       let x = f[0] + this.canvas.width / 2 - this.width / 2;
       let y = f[1] + this.canvas.height / 2 - this.height / 2;
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.ctx.drawImage(this.img, 0, 0, this.width, this.height, x, y, scale * this.canvas.width, scale * this.canvas.height);
+      this.ctx.drawImage(this.img, 0, 0, this.width, this.height, x, y, scale * this.width, scale * this.height);
       this.drawScaled(this.ctx, ctx_out);
     }
   }
@@ -569,8 +569,8 @@ class Player {
     this.selected_layer = null;
     this.onend_callback = null;
     this.update = null;
-    this.width = 1280 / 2;
-    this.height = 720 / 2;
+    this.width = 1280;
+    this.height = 720;
     this.total_time = 0;
     this.last_step = null;
     this.time = 0;
