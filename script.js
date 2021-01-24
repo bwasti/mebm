@@ -4,7 +4,7 @@ function backgroundElem(elem) {
 }
 
 const dpr = window.devicePixelRatio || 1;
-const fps = 20;
+const fps = 24;
 
 class RenderedLayer {
   constructor(file) {
@@ -21,12 +21,15 @@ class RenderedLayer {
     backgroundElem(this.canvas);
   }
 
+  resize() {
+    this.thumb_canvas.width = this.thumb_canvas.clientWidth * dpr;
+    this.thumb_canvas.height = this.thumb_canvas.clientHeight * dpr;
+  }
+
   show_preview(ref_time) {
     if (!this.ready) {
       return;
     }
-    this.thumb_canvas.width = this.thumb_canvas.clientWidth * dpr;
-    this.thumb_canvas.height = this.thumb_canvas.clientHeight * dpr;
     this.thumb_ctx.clearRect(0, 0, this.thumb_canvas.clientWidth, this.thumb_canvas.clientHeight);
     this.thumb_ctx.scale(dpr, dpr);
     this.render(this.thumb_ctx, ref_time);
@@ -443,6 +446,8 @@ class VideoLayer extends RenderedLayer {
       this.title_div.textContent = (100 * i / (d * fps)).toFixed(2) + "%";
     }
     this.ready = true;
+    this.video.remove();
+    this.video = null;
     this.title_div.innerHTML = "";
     this.setup_preview();
   }
@@ -590,6 +595,7 @@ class Player {
 
     this.setupPinchHadler();
     this.setupDragHandler();
+    this.resize();
   }
 
   intersectsTime(time, query) {
@@ -693,9 +699,9 @@ class Player {
       }
     }
 
+    this.cursor_preview.style.display = "block";
     let cursor_x = Math.max(ev.clientX - this.cursor_canvas.clientWidth / 2, 0);
     cursor_x = Math.min(cursor_x, rect.width - this.cursor_canvas.clientWidth);
-    this.cursor_preview.style.display = "block";
     this.cursor_preview.style.left = cursor_x + "px";
     this.cursor_preview.style.bottom = (rect.height) + "px";
 
@@ -965,7 +971,7 @@ class Player {
     }
   }
 
-  loop(realtime) {
+  resize() {
     // update canvas and time sizes
     {
       this.canvas.width = this.canvas.clientWidth * dpr;
@@ -976,6 +982,12 @@ class Player {
       this.time_canvas.height = this.time_canvas.clientHeight * dpr;
       this.time_ctx.scale(dpr, dpr);
     }
+    for (let layer of this.layers) {
+      layer.resize();
+    }
+  }
+
+  loop(realtime) {
 
     for (let layer of this.layers) {
       if (layer.start_time + layer.total_time > this.total_time) {
@@ -1158,9 +1170,13 @@ window.addEventListener('load', function() {
   }
 });
 
-window.onbeforeunload = function() {
+window.addEventListener('beforeunload', function() {
   return true;
-};
+});
+
+window.addEventListener('resize', function() {
+  player.resize();
+});
 
 function add_text() {
   let t = prompt("enter text");
