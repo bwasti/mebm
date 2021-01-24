@@ -1119,7 +1119,7 @@ window.addEventListener('load', function() {
       <br>
       to start, drag in or paste URLs to videos and images.
       <br>
-			more information and a demo can be found <a href="https://github.com/bwasti/mebm" target="_blank">here</a>
+      more information and a demo can be found <a href="https://github.com/bwasti/mebm" target="_blank">here</a>
       `;
     vid.src = "https://github.com/bwasti/mebm/blob/main/README_assets/usage.mp4?raw=true";
     vid.setAttribute('autoplay', true);
@@ -1150,7 +1150,6 @@ function exportVideo(blob) {
   const vid = document.createElement('video');
   vid.controls = true;
   vid.src = URL.createObjectURL(blob);
-  vid.currentTime = Number.MAX_SAFE_INTEGER;
   backgroundElem(vid);
   let extension = blob.type.split(';')[0].split('/')[1];
 
@@ -1173,6 +1172,8 @@ function exportVideo(blob) {
     make_a();
     vid.currentTime = 0;
   }
+  make_a();
+  vid.currentTime = Number.MAX_SAFE_INTEGER;
 }
 
 function upload() {
@@ -1237,6 +1238,16 @@ function download() {
   e.textContent = "exporting...";
   const chunks = [];
   const stream = player.canvas.captureStream();
+  for (let layer of player.layers) {
+    if (layer instanceof AudioLayer) {
+      let dest = layer.audio_ctx.createMediaStreamDestination();
+      layer.source.connect(dest);
+      let tracks = dest.stream.getAudioTracks();
+      for (let track of tracks) {
+        stream.addTrack(track);
+      }
+    }
+  }
   const rec = new MediaRecorder(stream);
   rec.ondataavailable = e => chunks.push(e.data);
   const available_types = getSupportedMimeTypes();
