@@ -612,9 +612,9 @@ class Player {
     this.canvas_holder.appendChild(this.canvas);
     this.time_holder = document.getElementById('time');
     this.time_canvas = document.createElement('canvas');
-    this.time_canvas.addEventListener('mousedown', this.scrubStart.bind(this));
-    this.time_canvas.addEventListener('mousemove', this.scrubMove.bind(this));
-    this.time_canvas.addEventListener('mouseleave', this.scrubEnd.bind(this));
+    this.time_canvas.addEventListener('pointerdown', this.scrubStart.bind(this));
+    this.time_canvas.addEventListener('pointermove', this.scrubMove.bind(this));
+    this.time_canvas.addEventListener('pointerleave', this.scrubEnd.bind(this));
     this.time_ctx = this.time_canvas.getContext('2d');
     this.time_holder.appendChild(this.time_canvas);
     this.cursor_preview = document.getElementById('cursor_preview');
@@ -648,7 +648,7 @@ class Player {
     let rect = this.time_holder.getBoundingClientRect();
     this.time = ev.offsetX / rect.width * this.total_time;
 
-    window.addEventListener('mouseup', this.scrubEnd.bind(this), {
+    window.addEventListener('pointerup', this.scrubEnd.bind(this), {
       once: true
     });
 
@@ -827,7 +827,7 @@ class Player {
     let dragging = false;
     let base_x = 0;
     let base_y = 0;
-    let mouseup = function(e) {
+    let pointerup = function(e) {
       dragging = false;
       e.preventDefault();
     }
@@ -843,7 +843,7 @@ class Player {
       }
       return ratio;
     }).bind(this);
-    let mousedown = function(e) {
+    let pointerdown = function(e) {
       if (!this.selected_layer) {
         return;
       }
@@ -858,22 +858,22 @@ class Player {
       dragging = true;
       base_x = e.offsetX * get_ratio(e.target) - f[0];
       base_y = e.offsetY * get_ratio(e.target) - f[1];
-      window.addEventListener('mouseup', mouseup, {
+      window.addEventListener('pointerup', pointerup, {
         once: true
       });
     }
-    let mousemove = function(e) {
+    let pointermove = function(e) {
       if (dragging) {
         let dx = e.offsetX * get_ratio(e.target) - base_x;
         let dy = e.offsetY * get_ratio(e.target) - base_y;
         callback(dx, dy);
       }
     }
-    elem.addEventListener('mousedown', mousedown.bind(this));
-    elem.addEventListener('mousemove', mousemove.bind(this));
+    elem.addEventListener('pointerdown', pointerdown.bind(this));
+    elem.addEventListener('pointermove', pointermove.bind(this));
     let deleter = function() {
-      elem.removeEventListener('mousedown', mousedown);
-      elem.removeEventListener('mousemove', mousemove);
+      elem.removeEventListener('pointerdown', pointerdown);
+      elem.removeEventListener('pointermove', pointermove);
     }
   }
 
