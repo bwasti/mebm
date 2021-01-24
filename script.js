@@ -199,6 +199,7 @@ class MoveableLayer extends RenderedLayer {
   // set index, k (of x, y, scale, rot) to val
   interpolate(index) {
     let frame = this.frames[index];
+    let is_anchor = this.is_anchor(index);
     // find prev anchor
     let prev_idx = 0;
     let prev_frame = frame;
@@ -241,6 +242,9 @@ class MoveableLayer extends RenderedLayer {
     }
     if (next_is_anchor) {
       this.set_anchor(next_idx);
+    }
+    if (is_anchor) {
+      this.set_anchor(index);
     }
   }
 
