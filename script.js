@@ -367,7 +367,7 @@ class VideoLayer extends RenderedLayer {
     super(file);
 
     // assume all videos fit in 1GB of ram
-    this.max_size = 1000 * 1e6; // 1GB max
+    this.max_size = 1000 * 1e6 / 4; // 1GB max
     this.video = document.createElement('video');
     this.video.setAttribute('autoplay', true);
     this.video.setAttribute('loop', true);
@@ -393,6 +393,17 @@ class VideoLayer extends RenderedLayer {
           this.width = Math.floor(width / scale);
           this.height = Math.floor(height / scale);
         }
+        const player_ratio = this.player.width / this.player.height;
+        const video_ratio = this.width / this.height;
+        if (video_ratio > player_ratio) { // video is wider, make it taller
+          let scale = video_ratio / player_ratio;
+          this.height *= scale;
+        } else {
+          let scale = player_ratio / video_ratio;
+          this.width *= scale;
+        }
+        this.canvas.height = this.height;
+        this.canvas.width = this.width;
         this.convertToArrayBuffer();
       }).bind(this));
       this.video.src = this.reader.result;
@@ -470,10 +481,13 @@ class AudioLayer extends RenderedLayer {
       this.audio_ctx.decodeAudioData(buffer, (aud_buffer) => {
         this.audio_buffer = aud_buffer;
         this.total_time = this.audio_buffer.duration * 1000;
+        if (this.total_time === 0) {
+          this.player.remove(this);
+        }
         this.ready = true;
-      }, function(e) {
-        console.log(e);
-      });
+      }, (function(e) {
+        this.player.remove(this);
+      }).bind(this));
     }).bind(this));
     this.reader.readAsArrayBuffer(file);
   }
@@ -488,6 +502,12 @@ class AudioLayer extends RenderedLayer {
     this.source.onended = (function() {
       this.playing = false;
     }).bind(this);
+  }
+
+  init(player, preview) {
+    super.init(player, preview);
+    const description = this.title_div.querySelector('.description');
+    description.textContent = "\"" + this.name + "\" [audio]";
   }
 
   render(ctx_out, ref_time) {
@@ -524,7 +544,8 @@ class AudioLayer extends RenderedLayer {
     if (restart) {
       if (!this.source ||
         (this.source.playbackState == this.source.FINISHED_STATE) ||
-        (this.source.playbackState == this.source.PLAYING_STATE)) {
+        (this.source.playbackState == this.source.PLAYING_STATE) ||
+        (this.source.playbackState == this.source.SCHEDULED_STATE)) {
         this.init_audio();
       }
       this.audio_ctx.resume();
