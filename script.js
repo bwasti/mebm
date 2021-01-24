@@ -132,7 +132,7 @@ class MoveableLayer extends RenderedLayer {
   adjustTotalTime(diff) {
     this.total_time += diff;
     const num_frames = Math.floor((this.total_time / 1000) * fps - this.frames.length);
-    const anchor = this.nearestAnchor(this.total_time, false);
+    const anchor = this.nearest_anchor(this.total_time, false);
     if (num_frames > 0) {
       for (let i = 0; i < num_frames; ++i) {
         let f = new Float32Array(5);
@@ -143,132 +143,25 @@ class MoveableLayer extends RenderedLayer {
       // prevent overflow
       this.frames.splice(this.frames.length + num_frames + 1, 1 - num_frames);
     }
-    this.updateInterpolation(anchor);
+    this.interpolate(anchor);
   }
 
-  anchor(index) {
-    let f = this.frames[index];
-    f[3] = 1;
+  set_anchor(index) {
+    this.frames[index][3] = 1;
   }
 
-  // set index, k (of x, y, scale, rot) to val
-  interpolate(index, k, val) {
-    let f = this.frames[index];
-    // find prev anchor
-    let prev_idx = 0;
-    let prev_val = val;
-    let next_idx = this.frames.length - 1;
-    let next_val = val;
-
-    for (let i = index - 1; i >= 0; i--) {
-      let prev = this.frames[i];
-      if (prev[3]) {
-        prev_idx = i;
-        prev_val = prev[k];
-        break;
-      }
-    }
-
-    for (let i = index + 1; i < this.frames.length; ++i) {
-      let next = this.frames[i];
-      if (next[3]) {
-        next_idx = i;
-        next_val = next[k];
-        break;
-      }
-    }
-
-    let prev_range = index - prev_idx;
-    const eps = 1e-9;
-    for (let i = 0; i <= prev_range; ++i) {
-      let s = i / (prev_range + eps);
-      let v = (1 - s) * val + s * prev_val;
-      this.frames[index - i][k] = v;
-    }
-    let next_range = next_idx - index;
-    for (let i = 0; i <= next_range; ++i) {
-      let s = i / (next_range + eps);
-      let v = (1 - s) * val + s * next_val;
-      this.frames[index + i][k] = v;
-    }
-
+  is_anchor(index) {
+    return this.frames[index][3];
   }
 
-  updateInterpolation(index) {
-    index = Math.max(index, 0);
-    let f = this.frames[index];
-    this.interpolate(index, 0, f[0]);
-    this.interpolate(index, 1, f[1]);
-    this.interpolate(index, 2, f[2]);
-  }
-
-  getIndex(ref_time) {
-    let time = ref_time - this.start_time;
-    let index = Math.floor(time / 1000 * fps);
-    return index;
-  }
-
-  getTime(index) {
-    return (index / fps * 1000) + this.start_time;
-  }
-
-  getFrame(ref_time) {
-    let index = this.getIndex(ref_time);
-    if (index < 0 || index >= this.frames.length) {
-      return null;
-    }
-    return this.frames[index];
-  }
-
-  deleteAnchor(ref_time) {
+  delete_anchor(ref_time) {
     let i = this.getIndex(ref_time);
     this.frames[i][3] = 0;
-    let prev_i = this.nearestAnchor(ref_time, false);
-    this.updateInterpolation(prev_i);
+    let prev_i = this.nearest_anchor(ref_time, false);
+    this.interpolate(prev_i);
   }
 
-  update(change, ref_time) {
-    let f = this.getFrame(ref_time);
-    if (!f) {
-      return;
-    }
-    let index = this.getIndex(ref_time);
-    if (change.scale) {
-      this.anchor(index);
-      const old_scale = f[2];
-      const new_scale = f[2] * change.scale;
-      let delta_x = ((this.width * old_scale) - (this.width * new_scale)) / 2;
-      let delta_y = ((this.height * old_scale) - (this.height * new_scale)) / 2;
-      this.interpolate(index, 2, new_scale);
-      this.interpolate(index, 0, f[0] + delta_x);
-      this.interpolate(index, 1, f[1] + delta_y);
-    }
-    if (change.x) {
-      this.anchor(index);
-      this.interpolate(index, 0, change.x);
-    }
-    if (change.y) {
-      this.anchor(index);
-      this.interpolate(index, 1, change.y);
-    }
-  }
-
-  // moveable layers have anchor points we'll want to show
-  render_time(ctx, y_coord, base_width, selected) {
-    super.render_time(ctx, y_coord, base_width, selected);
-    let scale = ctx.canvas.clientWidth / this.player.total_time;
-    let width = 4 * base_width;
-    for (let i = 0; i < this.frames.length; ++i) {
-      let f = this.frames[i];
-      if (f[3]) {
-        let anchor_x = this.start_time + 1000 * (i / fps);
-        ctx.fillStyle = `rgb(100,210,255)`;
-        ctx.fillRect(scale * anchor_x, y_coord - width / 2, 3, width);
-      }
-    }
-  }
-
-  nearestAnchor(time, fwd) {
+  nearest_anchor(time, fwd) {
     if (this.getFrame(time)) {
       let i = this.getIndex(time);
       let inc = function() {
@@ -288,6 +181,139 @@ class MoveableLayer extends RenderedLayer {
     }
     return -1;
   }
+
+  // interpolates f1 into f0
+  interpolate_frame(f0, f1, weight) {
+    if (weight > 1) {
+      weight = 1;
+    } else if (weight < 0) {
+      weight = 0;
+    }
+    let f = new Float32Array(5);
+    f[0] = weight * f0[0] + (1 - weight) * f1[0];
+    f[1] = weight * f0[1] + (1 - weight) * f1[1];
+    f[2] = weight * f0[2] + (1 - weight) * f1[2];
+    return f;
+  }
+
+  // set index, k (of x, y, scale, rot) to val
+  interpolate(index) {
+    let frame = this.frames[index];
+    // find prev anchor
+    let prev_idx = 0;
+    let prev_frame = frame;
+    let prev_is_anchor = false;
+    let next_idx = this.frames.length - 1;
+    let next_frame = frame;
+    let next_is_anchor = false;
+
+    for (let i = index - 1; i >= 0; i--) {
+      if (this.is_anchor(i)) {
+        prev_idx = i;
+        prev_is_anchor = true;
+        prev_frame = this.frames[i];
+        break;
+      }
+    }
+
+    for (let i = index + 1; i < this.frames.length; ++i) {
+      if (this.is_anchor(i)) {
+        next_idx = i;
+        next_is_anchor = true;
+        next_frame = this.frames[i];
+        break;
+      }
+    }
+
+    let prev_range = index - prev_idx;
+    const eps = 1e-9;
+    for (let i = 0; i <= prev_range; ++i) {
+      let s = i / (prev_range + eps);
+      this.frames[index - i] = this.interpolate_frame(prev_frame, frame, s);
+    }
+    let next_range = next_idx - index;
+    for (let i = 0; i <= next_range; ++i) {
+      let s = i / (next_range + eps);
+      this.frames[index + i] = this.interpolate_frame(next_frame, frame, s);
+    }
+    if (prev_is_anchor) {
+      this.set_anchor(prev_idx);
+    }
+    if (next_is_anchor) {
+      this.set_anchor(next_idx);
+    }
+  }
+
+  getIndex(ref_time) {
+    let time = ref_time - this.start_time;
+    let index = Math.floor(time / 1000 * fps);
+    return index;
+  }
+
+  getTime(index) {
+    return (index / fps * 1000) + this.start_time;
+  }
+
+  getFrame(ref_time) {
+    let index = this.getIndex(ref_time);
+    if (index < 0 || index >= this.frames.length) {
+      return null;
+    }
+    let frame = new Float32Array(this.frames[index]);
+    // we floored the index, but might need to interpolate subframes
+    if (index + 1 < this.frames.length) {
+      const diff = ref_time - this.getTime(index);
+      const diff_next = this.getTime(index + 1) - ref_time;
+      let next_frame = this.frames[index + 1];
+      let s = diff_next / (diff + diff_next);
+      frame = this.interpolate_frame(frame, next_frame, s);
+    }
+    return frame;
+  }
+
+  update(change, ref_time) {
+    let f = this.getFrame(ref_time);
+    if (!f) {
+      return;
+    }
+    let index = this.getIndex(ref_time);
+    if (change.scale) {
+      const old_scale = f[2];
+      const new_scale = f[2] * change.scale;
+      let delta_x = ((this.width * old_scale) - (this.width * new_scale)) / 2;
+      let delta_y = ((this.height * old_scale) - (this.height * new_scale)) / 2;
+      this.frames[index][0] = f[0] + delta_x;
+      this.frames[index][1] = f[1] + delta_y;
+      this.frames[index][2] = new_scale;
+      this.interpolate(index);
+      this.set_anchor(index);
+    }
+    if (change.x) {
+      this.frames[index][0] = change.x;
+      this.interpolate(index);
+      this.set_anchor(index);
+    }
+    if (change.y) {
+      this.frames[index][1] = change.y;
+      this.interpolate(index);
+      this.set_anchor(index);
+    }
+  }
+
+  // moveable layers have anchor points we'll want to show
+  render_time(ctx, y_coord, base_width, selected) {
+    super.render_time(ctx, y_coord, base_width, selected);
+    let scale = ctx.canvas.clientWidth / this.player.total_time;
+    let width = 4 * base_width;
+    for (let i = 0; i < this.frames.length; ++i) {
+      if (this.is_anchor(i)) {
+        let anchor_x = this.start_time + 1000 * (i / fps);
+        ctx.fillStyle = `rgb(100,210,255)`;
+        ctx.fillRect(scale * anchor_x, y_coord - width / 2, 3, width);
+      }
+    }
+  }
+
 }
 
 class ImageLayer extends MoveableLayer {
@@ -851,7 +877,7 @@ class Player {
     if (this.selected_layer) {
       let l = this.selected_layer;
       if (l instanceof MoveableLayer) {
-        let i = l.nearestAnchor(this.time, false);
+        let i = l.nearest_anchor(this.time, false);
         if (i >= 0) {
           this.time = l.getTime(i);
           return;
@@ -865,7 +891,7 @@ class Player {
     if (this.selected_layer) {
       let l = this.selected_layer;
       if (l instanceof MoveableLayer) {
-        let i = l.nearestAnchor(this.time, true);
+        let i = l.nearest_anchor(this.time, true);
         if (i >= 0) {
           this.time = l.getTime(i);
           return;
@@ -875,11 +901,11 @@ class Player {
     this.time = Math.min(this.time + 100, this.total_time - 1);
   }
 
-  deleteAnchor() {
+  delete_anchor() {
     if (this.selected_layer) {
       let l = this.selected_layer;
       if (l instanceof MoveableLayer) {
-        l.deleteAnchor(this.time);
+        l.delete_anchor(this.time);
         this.prev();
       }
     }
@@ -1044,7 +1070,7 @@ let player = new Player();
 
 function addFile(file) {
   if (file.type.indexOf('video') >= 0) {
-    //player.add(new AudioLayer(file));
+    player.add(new AudioLayer(file));
     player.add(new VideoLayer(file));
   } else if (file.type.indexOf('image') >= 0) {
     player.add(new ImageLayer(file));
@@ -1116,7 +1142,7 @@ window.addEventListener('keydown', function(ev) {
   } else if (ev.code == "ArrowRight") {
     player.next();
   } else if (ev.code == "Backspace") {
-    player.deleteAnchor();
+    player.delete_anchor();
   } else if (ev.code == "KeyI") {
     if (ev.ctrlKey) {
       let uris = prompt("paste comma separated list of URLs").replace(/ /g, '');
