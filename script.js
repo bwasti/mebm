@@ -450,6 +450,86 @@ class VideoLayer extends RenderedLayer {
   }
 }
 
+var AudioContext = window.AudioContext // Default
+    || window.webkitAudioContext // Safari and old versions of Chrome
+    || false; 
+class AudioLayer extends RenderedLayer {
+  constructor(file) {
+    super(file);
+    this.reader = new FileReader();
+    this.audio_ctx = new AudioContext();
+    this.audio_buffer = null;
+    this.source = null;
+    this.playing = false;
+    this.last_time = 0;
+    this.last_ref_time = 0;
+    this.reader.addEventListener("load", (function() {
+      let buffer = this.reader.result;
+      this.audio_ctx.decodeAudioData(buffer, (aud_buffer) => {
+        this.audio_buffer = aud_buffer;
+        this.total_time = this.audio_buffer.duration * 1000;
+        this.ready = true;
+      }, function(e) { console.log(e); });
+    }).bind(this));
+    this.reader.readAsArrayBuffer(file);
+  }
+
+  init_audio() {
+    if (this.source) {
+      this.source.disconnect(this.audio_ctx.destination);
+    }
+    this.source = this.audio_ctx.createBufferSource();
+    this.source.buffer = this.audio_buffer;
+    this.source.connect(this.audio_ctx.destination);
+    this.source.onended = (function(){
+      this.playing = false;
+    }).bind(this);
+  }
+
+  render(ctx_out, ref_time) {
+    if (!this.ready) {
+      return;
+    }
+    if (!this.player.playing) {
+      if (this.playing) {
+        this.audio_ctx.suspend();
+      }
+      this.playing = false;
+      return;
+    }
+
+    let time = ref_time - this.start_time;
+    if (time < 0 || time > this.total_time) {
+      return;
+    }
+    let restart = false;
+    const now = window.performance.now();
+    if (this.player.playing) {
+      // we have to start it up again
+      if (this.playing == false) {
+        restart = true;
+      }
+      const diff_t = ref_time - this.last_ref_time;
+      const diff_l = this.last_time - now;
+      if (Math.abs(diff_l - diff_t) > 100) {
+        restart = true;
+      }
+    }
+    this.last_time = now;
+    this.last_ref_time = ref_time;
+    if (restart) {
+      if (!this.source || 
+        (this.source.playbackState == this.source.FINISHED_STATE) ||
+        (this.source.playbackState == this.source.PLAYING_STATE)) {
+        this.init_audio();
+      }
+      this.audio_ctx.resume();
+      this.source.start(0, time / 1000);
+      this.playing = true;
+    }
+  }
+};
+
 class Player {
 
   constructor() {
@@ -492,6 +572,14 @@ class Player {
       query = this.time;
     }
     return Math.abs(query - time) / this.total_time < 0.01;
+  }
+
+  init_audio() {
+    for (let layer of this.layers) {
+      if (layer instanceof AudioLayer) {
+        layer.init_audio();
+      }
+    }
   }
 
   scrubStart(ev) {
@@ -917,6 +1005,7 @@ let player = new Player();
 
 function addFile(file) {
   if (file.type.indexOf('video') >= 0) {
+    player.add(new AudioLayer(file));
     player.add(new VideoLayer(file));
   } else if (file.type.indexOf('image') >= 0) {
     player.add(new ImageLayer(file));
@@ -980,6 +1069,7 @@ window.addEventListener('dragover', function(e) {
 window.addEventListener('keydown', function(ev) {
   if (ev.code == "Space") {
     player.playing = !player.playing;
+    player.init_audio();
   } else if (ev.code == "ArrowLeft") {
     player.prev();
   } else if (ev.code == "ArrowRight") {
@@ -1050,19 +1140,28 @@ function add_text() {
 
 function exportVideo(blob) {
   const vid = document.createElement('video');
-  vid.src = URL.createObjectURL(blob);
   vid.controls = true;
+  vid.src = URL.createObjectURL(blob);
+  vid.currentTime = Number.MAX_SAFE_INTEGER;
   backgroundElem(vid);
-  let h = document.getElementById('header');
-  let a = h.querySelector('#download');
-  if (!a) {
-    a = document.createElement('a');
-    a.id = 'download';
-    a.download = 'exported.webm';
-    a.textContent = 'download';
+  let extension = blob.type.split(';')[0].split('/')[1];
+  function make_a() {
+    let h = document.getElementById('header');
+    let a = h.querySelector('#download');
+    if (!a) {
+      a = document.createElement('a');
+      a.id = 'download';
+      a.download = (new Date()).getTime() + '.' + extension;
+      a.textContent = 'download';
+    }
+    a.href = vid.src;
+    document.getElementById('header').appendChild(a);
   }
-  a.href = vid.src;
-  document.getElementById('header').appendChild(a);
+  vid.ontimeupdate = function() {
+    this.ontimeupdate = ()=>{return;}
+    make_a();
+    vid.currentTime = 0;
+  }
 }
 
 function upload() {
@@ -1076,7 +1175,52 @@ function upload() {
   f.click();
 }
 
+function getSupportedMimeTypes() {
+  const VIDEO_TYPES = [
+    "webm", 
+    "ogg",
+    "mp4",
+    "x-matroska"
+  ];
+  const VIDEO_CODECS = [
+    "vp9",
+    "vp9.0",
+    "vp8",
+    "vp8.0",
+    "avc1",
+    "av1",
+    "h265",
+    "h.265",
+    "h264",
+    "h.264",
+    "opus",
+  ];
+
+  const supportedTypes = [];
+  VIDEO_TYPES.forEach((videoType) => {
+    const type = `video/${videoType}`;
+    VIDEO_CODECS.forEach((codec) => {
+        const variations = [
+        `${type};codecs=${codec}`,
+        `${type};codecs:${codec}`,
+        `${type};codecs=${codec.toUpperCase()}`,
+        `${type};codecs:${codec.toUpperCase()}`
+      ]
+      variations.forEach(variation => {
+        if(MediaRecorder.isTypeSupported(variation)) 
+            supportedTypes.push(variation);
+      })
+    });
+    if (MediaRecorder.isTypeSupported(type)) supportedTypes.push(type);
+  });
+  return supportedTypes;
+}
+
 function download() {
+  if (player.layers.length == 0) {
+    alert("nothing to export");
+    return; 
+  }
   const e = document.getElementById('export');
   const e_text = e.textContent;
   e.textContent = "exporting...";
@@ -1084,8 +1228,12 @@ function download() {
   const stream = player.canvas.captureStream();
   const rec = new MediaRecorder(stream);
   rec.ondataavailable = e => chunks.push(e.data);
+  const available_types = getSupportedMimeTypes();
+  if (available_types.length == 0) {
+    alert("cannot export! please use a screen recorder instead");
+  }
   rec.onstop = e => exportVideo(new Blob(chunks, {
-    type: 'video/webm'
+    type: available_types[0],
   }));
   player.time = 0;
   player.playing = true;
