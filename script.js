@@ -9,6 +9,9 @@ const fps = 24;
 class RenderedLayer {
   constructor(file) {
     this.name = file.name;
+    if (file.uri) {
+      this.uri = file.uri;
+    }
     this.ready = false;
 
     this.total_time = 0;
@@ -19,6 +22,18 @@ class RenderedLayer {
     this.canvas = document.createElement('canvas');
     this.ctx = this.canvas.getContext('2d');
     backgroundElem(this.canvas);
+  }
+
+  dump() {
+    return {
+      width: this.width,
+      height: this.height,
+      name: this.name,
+      start_time: this.start_time,
+      total_time: this.total_time,
+      uri: this.uri,
+      type: this.constructor.name
+    };
   }
 
   resize() {
@@ -127,6 +142,15 @@ class MoveableLayer extends RenderedLayer {
       this.frames.push(f);
     }
     this.frames[0][4] = 1;
+  }
+
+  dump() {
+    let obj = super.dump();
+    obj.frames = [];
+    for (let f of this.frames) {
+      obj.frames.push(Array.from(f));
+    }
+    return obj;
   }
 
   adjustTotalTime(diff) {
@@ -628,6 +652,51 @@ class Player {
     this.resize();
   }
 
+  dumpToJson() {
+    let out = [];
+    for (let layer of this.layers) {
+      out.push(layer.dump());
+    }
+    return JSON.stringify(out);
+  }
+
+  async loadLayers(layers) {
+    let on_ready = function(d, c) {
+      if (!d.ready) {
+        setTimeout(function(){ on_ready(d, c); }, 10);
+      } else {
+        c(d);
+      }
+    };
+    for (let layer_d of layers) {
+      let layer = null;
+      if (layer_d.type == "VideoLayer") {
+        layer = await this.addURI(layer_d.uri);
+      } else if (layer_d.type == "TextLayer") {
+        layer = this.add(new TextLayer(layer_d.name));
+      } else if (layer_d.type == "ImageLayer") {
+        layer = await this.addURI(layer_d.uri);
+      }
+      if (!layer) {
+        alert("layer couldn't be processed");
+        continue;
+      }
+      on_ready(layer, function(l) {
+        layer.name = layer.name;
+        layer.width = layer_d.width,
+        layer.height = layer_d.height,
+        layer.start_time = layer_d.start_time;
+        layer.total_time = layer_d.total_time;
+        if (layer_d.frames) {
+          layer.frames = [];
+          for (let f of layer_d.frames) {
+            layer.frames.push(new Float32Array(f));
+          }
+        }
+      });
+    }
+  }
+
   intersectsTime(time, query) {
     if (!query) {
       query = this.time;
@@ -987,6 +1056,7 @@ class Player {
     layer.init(this, preview);
     this.layers.push(layer);
     this.select(layer);
+    return layer;
   }
 
   onend(callback) {
@@ -1071,49 +1141,58 @@ class Player {
     window.requestAnimationFrame(this.loop.bind(this));
   }
 
+  addFile(file) {
+    if (file.type.indexOf('video') >= 0) {
+      //player.add(new AudioLayer(file));
+      return this.add(new VideoLayer(file));
+    } else if (file.type.indexOf('image') >= 0) {
+      return this.add(new ImageLayer(file));
+    }
+  }
+
+  async addURI(uri) {
+    // safari has a bug here
+    if (!uri) {
+      return;
+    }
+    let extension = uri.split(/[#?]/)[0].split('.').pop().trim();
+    // todo: add more types
+    const ext_map = {
+      'mp4': 'video/mp4',
+      'mpeg4': 'video/mp4',
+      'mpeg': 'video/mpeg',
+      'ogv': 'video/ogg',
+      'webm': 'video/webm',
+      'gif': 'image/gif',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'webp': 'image/webp',
+    };
+    if (!ext_map[extension]) {
+      if (extension == 'json') {
+        let response = await fetch(uri);
+        let layers = await response.json();
+        player.loadLayers(layers);
+      }
+      return;
+    }
+    let metadata = {
+      type: ext_map[extension]
+    };
+    let segs = uri.split("/");
+    let name = segs[segs.length - 1];
+    let response = await fetch(uri);
+    let data = await response.blob();
+    let file = new File([data], name, metadata);
+    file.uri = uri;
+    return this.addFile(file);
+  }
+
 }
 
 
 let player = new Player();
-
-function addFile(file) {
-  if (file.type.indexOf('video') >= 0) {
-    //player.add(new AudioLayer(file));
-    player.add(new VideoLayer(file));
-  } else if (file.type.indexOf('image') >= 0) {
-    player.add(new ImageLayer(file));
-  }
-}
-
-async function addURI(uri) {
-  // safari has a bug here
-  if (!uri) {
-    return;
-  }
-  let response = await fetch(uri);
-  let data = await response.blob();
-  let extension = uri.split(/[#?]/)[0].split('.').pop().trim();
-  // todo: add more types
-  const ext_map = {
-    'mp4': 'video/mp4',
-    'mpeg4': 'video/mp4',
-    'mpeg': 'video/mpeg',
-    'ogv': 'video/ogg',
-    'webm': 'video/webm',
-    'gif': 'image/gif',
-    'jpg': 'image/jpeg',
-    'jpeg': 'image/jpeg',
-    'png': 'image/png',
-    'webp': 'image/webp',
-  };
-  let metadata = {
-    type: ext_map[extension]
-  };
-  let segs = uri.split("/");
-  let name = segs[segs.length - 1];
-  let file = new File([data], name, metadata);
-  addFile(file);
-}
 
 window.addEventListener('drop', function(ev) {
   ev.preventDefault();
@@ -1122,9 +1201,9 @@ window.addEventListener('drop', function(ev) {
       let item = ev.dataTransfer.items[i];
       if (item.kind === 'file') {
         const file = item.getAsFile();
-        addFile(file);
+        player.addFile(file);
       } else if (item.kind === 'string' && item.type === 'text/uri-list') {
-        item.getAsString(addURI);
+        item.getAsString(player.addURI);
       }
     }
   }
@@ -1132,7 +1211,7 @@ window.addEventListener('drop', function(ev) {
 
 window.addEventListener('paste', function(ev) {
   let uri = (event.clipboardData || window.clipboardData).getData('text');
-  addURI(uri);
+  player.addURI(uri);
 });
 
 // TODO show something
@@ -1157,14 +1236,44 @@ window.addEventListener('keydown', function(ev) {
       let encoded = encodeURIComponent(uris);
       location.hash = encoded;
     }
+  } else if (ev.code == "KeyJ") {
+    if (ev.ctrlKey) {
+      const text = document.createElement('div');
+      const preamble = document.createElement('span');
+      preamble.textContent = "host the below JSON to share the project";
+      const json = document.createElement('pre');
+      json.textContent = player.dumpToJson();
+      json.style.overflow = 'scroll';
+      json.style.wordBreak = 'break-all';
+      json.style.height = '50%';
+      text.appendChild(preamble);
+      text.appendChild(document.createElement('br'));
+      text.appendChild(document.createElement('br'));
+      text.appendChild(json);
+      popup(text);
+    }
   }
 });
+
+function popup(text) {
+  const div = document.createElement('div');
+  const close = document.createElement('a');
+  close.addEventListener('click', function() {
+    div.remove();
+  });
+  close.textContent = "[x]";
+  close.classList.toggle('close');
+  div.appendChild(close);
+  div.appendChild(text);
+  div.classList.toggle('popup');
+  document.body.appendChild(div);
+}
 
 window.addEventListener('load', function() {
   if (location.hash) {
     let l = decodeURIComponent(location.hash.substring(1));
     for (let uri of l.split(',')) {
-      addURI(uri);
+      player.addURI(uri);
     }
     location.hash = "";
     return;
@@ -1172,14 +1281,7 @@ window.addEventListener('load', function() {
   let localStorage = window.localStorage;
   let seen = localStorage.getItem('_seen');
   if (!seen || false) {
-    const div = document.createElement('div');
-    const close = document.createElement('a');
     const text = document.createElement('p');
-    close.addEventListener('click', function() {
-      div.remove();
-    });
-    close.textContent = "[x]";
-    close.id = "close";
     text.innerHTML = `welcome!
       <br>
       <br>
@@ -1187,10 +1289,7 @@ window.addEventListener('load', function() {
       <br>
       more information and a demo can be found <a href="https://github.com/bwasti/mebm" target="_blank">here</a>
       `;
-    div.appendChild(close);
-    div.appendChild(text);
-    div.classList.toggle('popup');
-    document.body.appendChild(div);
+    popup(text);
     localStorage.setItem('_seen', 'true');
   }
   // fix mobile touch
@@ -1254,7 +1353,7 @@ function upload() {
   let f = document.getElementById('filepicker');
   f.addEventListener('input', function(e) {
     for (let file of e.target.files) {
-      addFile(file);
+      player.addFile(file);
     }
     f.value = '';
   });

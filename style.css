@@ -39,7 +39,7 @@ html, body {
 .popup p {
   padding-bottom: 20px;
 }
-.popup #close {
+.popup .close {
   float: right;
   color: #222;
 }
