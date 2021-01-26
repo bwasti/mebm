@@ -50,7 +50,7 @@ The design values simplicity and rudimentary functionality over a full feature s
 - compatibility
   - [ ] chrome export bug workaround
   - [ ] mouseover preview safari fix
-  - [ ] mobile touch events
+  - [ ] mobile touch events (partially done)
 - code
   - [ ] refactor/simplify MoveableLayer this.frames
   - [ ] make video a MoveableLayer
