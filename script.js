@@ -1451,10 +1451,20 @@ function download() {
   e.textContent = "exporting...";
   const chunks = [];
   const stream = player.canvas.captureStream();
-  let dest = player.audio_ctx.createMediaStreamDestination();
-  player.audio_dest = dest;
-  let tracks = dest.stream.getAudioTracks();
-  stream.addTrack(tracks[0]);
+
+  let has_audio = false;
+  for (let layer of player.layers) {
+    if (layer instanceof AudioLayer) {
+      has_audio = true;
+      break;
+    }
+  }
+  if (has_audio) {
+    let dest = player.audio_ctx.createMediaStreamDestination();
+    player.audio_dest = dest;
+    let tracks = dest.stream.getAudioTracks();
+    stream.addTrack(tracks[0]);
+  }
   const rec = new MediaRecorder(stream);
   rec.ondataavailable = e => chunks.push(e.data);
   const available_types = getSupportedMimeTypes();
