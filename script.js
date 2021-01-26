@@ -1165,6 +1165,8 @@ class Player {
       return this.add(new VideoLayer(file));
     } else if (file.type.indexOf('image') >= 0) {
       return this.add(new ImageLayer(file));
+    } else if (file.type.indexOf('audio') >= 0) {
+      return this.add(new AudioLayer(file));
     }
   }
 
@@ -1186,6 +1188,11 @@ class Player {
       'jpeg': 'image/jpeg',
       'png': 'image/png',
       'webp': 'image/webp',
+      'aac': 'audio/aac',
+      'mp3': 'audio/mpeg',
+      'oga': 'audio/ogg',
+      'wav': 'audio/wav',
+      'weba': 'audio/webm',
     };
     if (!ext_map[extension]) {
       if (extension == 'json') {
