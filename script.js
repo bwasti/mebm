@@ -56,7 +56,23 @@ class RenderedLayer {
     this.description.textContent = "\"" + this.name + "\"";
   }
 
-  setup_preview() {
+  init(player, preview) {
+    this.player = player;
+    this.preview = preview;
+    this.canvas.width = this.player.width;
+    this.canvas.height = this.player.height;
+    this.title_div = this.preview.querySelector('.preview_title');
+
+    this.description = document.createElement('span');
+    this.description.classList.toggle('description');
+    this.description.addEventListener('click', (function(e) {
+      const new_text = prompt("enter new text");
+      if (new_text) {
+        this.update_name(new_text);
+      }
+    }).bind(this));
+    this.title_div.appendChild(this.description);
+
     let delete_option = document.createElement('a');
     delete_option.textContent = '[x]';
     delete_option.style.float = "right";
@@ -66,28 +82,11 @@ class RenderedLayer {
       }
     }).bind(this));
     this.title_div.appendChild(delete_option);
-    this.description.classList.toggle('description');
-    this.update_name(this.name);
-    this.description.addEventListener('click', (function(e) {
-      const new_text = prompt("enter new text");
-      if (new_text) {
-        this.update_name(new_text);
-      }
-    }).bind(this));
-  }
 
-  init(player, preview) {
-    this.player = player;
-    this.preview = preview;
-    this.canvas.width = this.player.width;
-    this.canvas.height = this.player.height;
-    this.title_div = this.preview.querySelector('.preview_title');
-    this.description = document.createElement('span');
-    this.title_div.appendChild(this.description);
     this.thumb_canvas = this.preview.querySelector('.preview_thumb');
     this.thumb_ctx = this.thumb_canvas.getContext('2d');
     this.thumb_ctx.scale(dpr, dpr);
-    this.setup_preview();
+    this.update_name(this.name);
   }
 
   render_time(ctx, y_coord, width, selected) {
@@ -542,8 +541,7 @@ class VideoLayer extends RenderedLayer {
     this.ready = true;
     this.video.remove();
     this.video = null;
-    this.name = name;
-    this.setup_preview();
+    this.update_name(name);
   }
 
   render(ctx_out, ref_time) {
