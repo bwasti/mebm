@@ -1296,6 +1296,9 @@ window.addEventListener('keydown', function(ev) {
 
 function popup(text) {
   const div = document.createElement('div');
+  div.addEventListener('keydown', function(ev) {
+    ev.stopPropagation();
+  });
   const close = document.createElement('a');
   close.addEventListener('click', function() {
     div.remove();
