@@ -56,10 +56,10 @@ div.settings label:after { content: ":"; }
   float: right;
   color: #222;
 }
-.popup p a {
+.popup div a {
   color: #222;
 }
-.popup p {
+.popup div {
 text-align: center;
 }
 .popup a:hover {
