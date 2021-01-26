@@ -385,6 +385,7 @@ class TextLayer extends MoveableLayer {
     };
     super(f);
     this.color = "#ffffff";
+    this.shadow = true;
     this.ready = true;
   }
 
@@ -396,6 +397,24 @@ class TextLayer extends MoveableLayer {
     this.title_div.appendChild(color_picker);
     color_picker.addEventListener('change', (function(e) {
       this.color = e.target.value;
+    }).bind(this));
+
+    let shadow_label_txt = document.createTextNode("Shadow:");
+    let shadow_picker_label = document.createElement('label');
+    shadow_picker_label.appendChild(shadow_label_txt);
+    let shadow_picker = document.createElement('input');
+    shadow_picker.type = "checkbox";
+    shadow_picker.checked = true;
+    shadow_picker.id="shadow"
+    shadow_picker.value = this.shadow;
+    this.title_div.appendChild(shadow_picker_label);
+    this.title_div.appendChild(shadow_picker);
+    shadow_picker.addEventListener('change', (function(e) {
+      if (e.target.checked) {
+         this.shadow = true;
+      } else {
+        this.shadow = false;
+      }
     }).bind(this));
   }
 
@@ -409,8 +428,13 @@ class TextLayer extends MoveableLayer {
       this.height = rect.actualBoundingBoxAscent + rect.actualBoundingBoxDescent;
       let x = f[0] + this.canvas.width / 2;
       let y = f[1] + this.canvas.height / 2;
-      this.ctx.shadowColor = "black";
-      this.ctx.shadowBlur = 7;
+      if (this.shadow) {
+        this.ctx.shadowColor = "black";
+        this.ctx.shadowBlur = 7;
+      } else {
+        this.ctx.shadowColor = null;
+        this.ctx.shadowBlur = null;
+      }
       this.ctx.fillStyle = this.color;
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.ctx.fillText(this.name, x, y);
