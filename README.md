@@ -18,6 +18,10 @@ The design values simplicity and rudimentary functionality over a full feature s
   - drag to move them
   - arrow keys to jump between keypoints
   - backspace to remove keypoints
+- import
+  - by dragging in videos images or audio files
+  - by clicking "+ media"
+  - by pasting URLs to hosted media (only some domains)
 - export by clicking "export"
   - let video play to completion
   - click "download" to grab a copy (.webm)
