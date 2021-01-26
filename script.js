@@ -766,13 +766,7 @@ class Player {
       this.dragging = function(t) {
         let diff = t - base_t;
         base_t = t;
-        if (l instanceof MoveableLayer) {
-          let diff = l.start_time - t;
-          l.adjustTotalTime(diff);
-          l.start_time -= diff;
-        } else {
-          l.start_time += diff;
-        }
+        l.start_time += diff;
       }
     } else if (this.intersectsTime(l.start_time + l.total_time)) {
       this.time = l.start_time + l.total_time;
@@ -1321,9 +1315,9 @@ window.addEventListener('load', function() {
 
 });
 
-window.addEventListener('beforeunload', function() {
+window.onbeforeunload = function() {
   return true;
-});
+}
 
 window.addEventListener('resize', function() {
   player.resize();
