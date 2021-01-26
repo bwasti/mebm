@@ -9,7 +9,6 @@ mebm is a browser based video editor that supports animation of images and text 
 The animation is done with key-frames (denoted in blue on the timeline) and linear interpolation.
 
 The design values simplicity and rudimentary functionality over a full feature set.
-Audio is not yet supported, but is planned.
 
 # usage
 
@@ -38,9 +37,10 @@ Audio is not yet supported, but is planned.
   - [ ] error on bad type (easy)
   - [ ] animated .gif support
 - editing
+  - [ ] menu for advanced settings per layer (easy)
+  - [ ] element selection by click (medium)
   - [ ] undo (hard)
-  - [ ] audio (hard)
-  - [ ] face tracking (medium/easy)
+  - [ ] face tracking (medium)
   - [ ] opacity (easy)
   - [ ] rotation (medium)
 - compatibility
