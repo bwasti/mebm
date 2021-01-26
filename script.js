@@ -529,6 +529,7 @@ class VideoLayer extends RenderedLayer {
   async convertToArrayBuffer() {
     this.video.pause();
     let d = this.video.duration;
+    let name = this.name;
     for (let i = 0; i < d * fps; ++i) {
       let frame = await this.seek(i / fps);
       let sum = 0;
@@ -536,12 +537,12 @@ class VideoLayer extends RenderedLayer {
         sum += frame.data[j];
       }
       this.frames.push(frame);
-      this.title_div.textContent = (100 * i / (d * fps)).toFixed(2) + "%";
+      this.update_name((100 * i / (d * fps)).toFixed(2) + "%");
     }
     this.ready = true;
     this.video.remove();
     this.video = null;
-    this.title_div.innerHTML = "";
+    this.name = name;
     this.setup_preview();
   }
 
