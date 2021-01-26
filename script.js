@@ -60,7 +60,7 @@ class RenderedLayer {
       }
     }).bind(this));
     this.title_div.appendChild(delete_option);
-    const description = document.createElement('div');
+    const description = document.createElement('span');
     description.classList.toggle('description');
     description.textContent = "\"" + this.name + "\"";
     description.addEventListener('click', (function(e) {
@@ -391,31 +391,38 @@ class TextLayer extends MoveableLayer {
 
   init(player, preview) {
     super.init(player, preview);
-    let color_picker = document.createElement('input');
-    color_picker.type = "color";
-    color_picker.value = this.color;
-    this.title_div.appendChild(color_picker);
-    color_picker.addEventListener('change', (function(e) {
-      this.color = e.target.value;
-    }).bind(this));
 
-    let shadow_label_txt = document.createTextNode("Shadow:");
-    let shadow_picker_label = document.createElement('label');
-    shadow_picker_label.appendChild(shadow_label_txt);
-    let shadow_picker = document.createElement('input');
-    shadow_picker.type = "checkbox";
-    shadow_picker.checked = true;
-    shadow_picker.id="shadow"
-    shadow_picker.value = this.shadow;
-    this.title_div.appendChild(shadow_picker_label);
-    this.title_div.appendChild(shadow_picker);
-    shadow_picker.addEventListener('change', (function(e) {
-      if (e.target.checked) {
-         this.shadow = true;
-      } else {
-        this.shadow = false;
-      }
-    }).bind(this));
+    let settings = document.createElement('div');
+    settings.classList.toggle('settings');
+
+    let add_setting = (function(name, type, init, callback) {
+      let label = document.createElement('label');
+      label.textContent = name;
+      let setting = document.createElement('input');
+      setting.addEventListener('change', callback.bind(this));
+      setting.type = type;
+      init.bind(this)(setting);
+      settings.appendChild(label);
+      settings.appendChild(setting);
+    }).bind(this);
+
+    add_setting('color', 'color', i => i.value = this.color, function(e) {
+      this.color = e.target.value;
+    });
+
+    add_setting('shadow', 'checkbox', i => i.checked = this.shadow, function(e) {
+      this.shadow = e.target.checked;
+    });
+
+
+    let settings_link = document.createElement('a');
+    settings_link.style.float = "right";
+    settings_link.textContent = "[...]";
+    settings_link.addEventListener('click', function() {
+      popup(settings);
+    });
+    this.title_div.appendChild(settings_link);
+
   }
 
   render(ctx_out, ref_time) {
@@ -1296,7 +1303,7 @@ window.addEventListener('load', function() {
   let localStorage = window.localStorage;
   let seen = localStorage.getItem('_seen');
   if (!seen || false) {
-    const text = document.createElement('p');
+    const text = document.createElement('div');
     text.innerHTML = `welcome!
       <br>
       <br>
