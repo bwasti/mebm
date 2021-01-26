@@ -50,6 +50,12 @@ class RenderedLayer {
     this.render(this.thumb_ctx, ref_time);
   }
 
+
+  update_name(name) {
+    this.name = name;
+    this.description.textContent = "\"" + this.name + "\"";
+  }
+
   setup_preview() {
     let delete_option = document.createElement('a');
     delete_option.textContent = '[x]';
@@ -60,17 +66,14 @@ class RenderedLayer {
       }
     }).bind(this));
     this.title_div.appendChild(delete_option);
-    const description = document.createElement('span');
-    description.classList.toggle('description');
-    description.textContent = "\"" + this.name + "\"";
-    description.addEventListener('click', (function(e) {
+    this.description.classList.toggle('description');
+    this.update_name(this.name);
+    this.description.addEventListener('click', (function(e) {
       const new_text = prompt("enter new text");
       if (new_text) {
-        this.name = new_text;
-        description.textContent = "\"" + this.name + "\"";
+        this.update_name(new_text);
       }
     }).bind(this));
-    this.title_div.appendChild(description);
   }
 
   init(player, preview) {
@@ -79,6 +82,8 @@ class RenderedLayer {
     this.canvas.width = this.player.width;
     this.canvas.height = this.player.height;
     this.title_div = this.preview.querySelector('.preview_title');
+    this.description = document.createElement('span');
+    this.title_div.appendChild(this.description);
     this.thumb_canvas = this.preview.querySelector('.preview_thumb');
     this.thumb_ctx = this.thumb_canvas.getContext('2d');
     this.thumb_ctx.scale(dpr, dpr);
@@ -406,6 +411,10 @@ class TextLayer extends MoveableLayer {
       settings.appendChild(setting);
     }).bind(this);
 
+    add_setting('text', 'text', i => i.value = this.name, function(e) {
+      this.update_name(e.target.value);
+    });
+
     add_setting('color', 'color', i => i.value = this.color, function(e) {
       this.color = e.target.value;
     });
@@ -413,7 +422,6 @@ class TextLayer extends MoveableLayer {
     add_setting('shadow', 'checkbox', i => i.checked = this.shadow, function(e) {
       this.shadow = e.target.checked;
     });
-
 
     let settings_link = document.createElement('a');
     settings_link.style.float = "right";
@@ -597,8 +605,11 @@ class AudioLayer extends RenderedLayer {
 
   init(player, preview) {
     super.init(player, preview);
-    const description = this.title_div.querySelector('.description');
-    description.textContent = "\"" + this.name + "\" [audio]";
+  }
+
+  update_name(name) {
+    this.name = name;
+    this.description.textContent = "\"" + this.name + "\" [audio]";
   }
 
   render(ctx_out, ref_time) {
