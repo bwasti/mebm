@@ -575,16 +575,17 @@ class AudioLayer extends RenderedLayer {
     this.reader.readAsArrayBuffer(file);
   }
 
-  init_audio() {
+  init_audio(ref_time) {
     if (this.source) {
-      this.source.disconnect(this.audio_ctx.destination);
+      this.source.disconnect(this.player.audio_ctx.destination);
     }
-    this.source = this.audio_ctx.createBufferSource();
+    this.source = this.player.audio_ctx.createBufferSource();
     this.source.buffer = this.audio_buffer;
-    this.source.connect(this.audio_ctx.destination);
-    this.source.onended = (function() {
-      this.playing = false;
-    }).bind(this);
+    this.source.connect(this.player.audio_ctx.destination);
+    if (this.player.audio_dest) {
+      this.source.connect(this.player.audio_dest);
+    }
+    this.started = false;
   }
 
   init(player, preview) {
@@ -598,42 +599,15 @@ class AudioLayer extends RenderedLayer {
       return;
     }
     if (!this.player.playing) {
-      if (this.playing) {
-        this.audio_ctx.suspend();
-      }
-      this.playing = false;
       return;
     }
-
     let time = ref_time - this.start_time;
     if (time < 0 || time > this.total_time) {
       return;
     }
-    let restart = false;
-    const now = window.performance.now();
-    if (this.player.playing) {
-      // we have to start it up again
-      if (this.playing == false) {
-        restart = true;
-      }
-      const diff_t = ref_time - this.last_ref_time;
-      const diff_l = this.last_time - now;
-      if (Math.abs(diff_l - diff_t) > 100) {
-        restart = true;
-      }
-    }
-    this.last_time = now;
-    this.last_ref_time = ref_time;
-    if (restart) {
-      if (!this.source ||
-        (this.source.playbackState == this.source.FINISHED_STATE) ||
-        (this.source.playbackState == this.source.PLAYING_STATE) ||
-        (this.source.playbackState == this.source.SCHEDULED_STATE)) {
-        this.init_audio();
-      }
-      this.audio_ctx.resume();
+    if (!this.started) {
       this.source.start(0, time / 1000);
-      this.playing = true;
+      this.started = true;
     }
   }
 };
@@ -652,10 +626,12 @@ class Player {
     this.total_time = 0;
     this.last_step = null;
     this.time = 0;
+    this.last_paused = Number.MAX_SAFE_INTEGER;
     // for preview
     this.aux_time = 0;
     this.canvas = document.createElement('canvas');
     this.ctx = this.canvas.getContext('2d');
+    this.audio_ctx = new AudioContext();
     this.canvas_holder = document.getElementById('canvas');
     this.canvas_holder.appendChild(this.canvas);
     this.time_holder = document.getElementById('time');
@@ -728,12 +704,26 @@ class Player {
     return Math.abs(query - time) / this.total_time < 0.01;
   }
 
-  init_audio() {
+  refresh_audio() {
     for (let layer of this.layers) {
       if (layer instanceof AudioLayer) {
-        layer.init_audio();
+        layer.init_audio(this.time);
       }
     }
+  }
+
+  play() {
+    this.playing = true;
+    if (this.last_paused != this.time) {
+      this.refresh_audio();
+    }
+    this.audio_ctx.resume();
+  }
+
+  pause() {
+    this.playing = false;
+    this.audio_ctx.suspend();
+    this.last_paused = this.time;
   }
 
   scrubStart(ev) {
@@ -1132,6 +1122,9 @@ class Player {
         this.onend_callback(this);
         this.onend_callback = null;
       }
+      if (this.time >= this.total_time) {
+        this.refresh_audio();
+      }
       this.time %= this.total_time;
     }
     this.last_step = realtime;
@@ -1167,7 +1160,7 @@ class Player {
 
   addFile(file) {
     if (file.type.indexOf('video') >= 0) {
-      //player.add(new AudioLayer(file));
+      this.add(new AudioLayer(file));
       return this.add(new VideoLayer(file));
     } else if (file.type.indexOf('image') >= 0) {
       return this.add(new ImageLayer(file));
@@ -1246,8 +1239,12 @@ window.addEventListener('dragover', function(e) {
 
 window.addEventListener('keydown', function(ev) {
   if (ev.code == "Space") {
-    player.playing = !player.playing;
-    player.init_audio();
+    if (player.playing) {
+      player.pause();
+    } else {
+      player.play();
+    }
+    //player.init_audio();
   } else if (ev.code == "ArrowLeft") {
     player.prev();
   } else if (ev.code == "ArrowRight") {
@@ -1435,16 +1432,10 @@ function download() {
   e.textContent = "exporting...";
   const chunks = [];
   const stream = player.canvas.captureStream();
-  for (let layer of player.layers) {
-    if (layer instanceof AudioLayer) {
-      let dest = layer.audio_ctx.createMediaStreamDestination();
-      layer.source.connect(dest);
-      let tracks = dest.stream.getAudioTracks();
-      for (let track of tracks) {
-        stream.addTrack(track);
-      }
-    }
-  }
+  let dest = player.audio_ctx.createMediaStreamDestination();
+  player.audio_dest = dest;
+  let tracks = dest.stream.getAudioTracks();
+  stream.addTrack(tracks[0]);
   const rec = new MediaRecorder(stream);
   rec.ondataavailable = e => chunks.push(e.data);
   const available_types = getSupportedMimeTypes();
@@ -1454,13 +1445,15 @@ function download() {
   rec.onstop = e => exportVideo(new Blob(chunks, {
     type: available_types[0],
   }));
+  player.pause();
   player.time = 0;
-  player.playing = true;
+  player.play();
   rec.start();
   player.onend(function(p) {
     rec.stop();
+    player.audio_dest = null;
     e.textContent = e_text;
-    player.playing = false;
+    player.pause();
     player.time = 0;
   });
 }
