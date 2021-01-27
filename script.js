@@ -4,7 +4,7 @@ function backgroundElem(elem) {
 }
 
 const dpr = window.devicePixelRatio || 1;
-const fps = 60;
+const fps = 24;
 
 class RenderedLayer {
   constructor(file) {
