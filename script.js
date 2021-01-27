@@ -182,16 +182,16 @@ class MoveableLayer extends RenderedLayer {
   }
 
   set_anchor(index) {
-    this.frames[index][3] = 1;
+    this.frames[index][4] = 1;
   }
 
   is_anchor(index) {
-    return this.frames[index][3];
+    return this.frames[index][4];
   }
 
   delete_anchor(ref_time) {
     let i = this.getIndex(ref_time);
-    this.frames[i][3] = 0;
+    this.frames[i][4] = 0;
     let prev_i = this.nearest_anchor(ref_time, false);
     this.interpolate(prev_i);
   }
@@ -208,7 +208,7 @@ class MoveableLayer extends RenderedLayer {
       };
       inc();
       while (i >= 0 && i < this.frames.length) {
-        if (this.frames[i][3]) {
+        if (this.is_anchor(i)) {
           return i;
         }
         inc();
@@ -228,6 +228,7 @@ class MoveableLayer extends RenderedLayer {
     f[0] = weight * f0[0] + (1 - weight) * f1[0];
     f[1] = weight * f0[1] + (1 - weight) * f1[1];
     f[2] = weight * f0[2] + (1 - weight) * f1[2];
+    f[3] = weight * f0[3] + (1 - weight) * f1[3];
     return f;
   }
 
@@ -337,6 +338,11 @@ class MoveableLayer extends RenderedLayer {
       this.interpolate(index);
       this.set_anchor(index);
     }
+    if (change.rotation) {
+      this.frames[index][3] = f[3] + change.rotation;
+      this.interpolate(index);
+      this.set_anchor(index);
+    }
   }
 
   // moveable layers have anchor points we'll want to show
@@ -442,6 +448,7 @@ class TextLayer extends MoveableLayer {
   render(ctx_out, ref_time) {
     let f = this.getFrame(ref_time);
     if (f) {
+
       let scale = f[2];
       this.ctx.font = Math.floor(scale * 30) + "px Georgia";
       let rect = this.ctx.measureText(this.name);
@@ -458,7 +465,12 @@ class TextLayer extends MoveableLayer {
       }
       this.ctx.fillStyle = this.color;
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.ctx.fillText(this.name, x, y);
+      this.ctx.save();
+      this.ctx.translate(x, y);
+      this.ctx.rotate(f[3] * (Math.PI / 180));
+      this.ctx.textAlign = "center";
+      this.ctx.fillText(this.name, 0, 0);
+      this.ctx.restore();
       this.drawScaled(this.ctx, ctx_out);
     }
   }
@@ -889,6 +901,14 @@ class Player {
         scale -= delta * 0.01;
         // Your zoom/scale factor
         callback(scale, 0);
+      } else if (e.altKey) {
+        let delta = e.deltaY;
+        if (!Math.abs(delta) && e.deltaX != 0) {
+          delta = e.deltaX * 0.5;
+        }
+        let rot = -delta * 0.1;
+        // Your zoom/scale factor
+        callback(0, rot);
       }
     }
     // safari
