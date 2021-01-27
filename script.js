@@ -596,10 +596,14 @@ class AudioLayer extends RenderedLayer {
     this.reader.readAsArrayBuffer(file);
   }
 
-  init_audio(ref_time) {
+  disconnect() {
     if (this.source) {
       this.source.disconnect(this.player.audio_ctx.destination);
     }
+  }
+
+  init_audio(ref_time) {
+    this.disconnect();
     this.source = this.player.audio_ctx.createBufferSource();
     this.source.buffer = this.audio_buffer;
     this.source.connect(this.player.audio_ctx.destination);
@@ -1045,6 +1049,9 @@ class Player {
       // divs are reversed
       layer_picker.children[len - idx - 1].remove();
     }
+    if (layer instanceof AudioLayer) {
+      layer.disconnect();
+    }
     this.total_time = 0;
   }
 
@@ -1269,7 +1276,6 @@ window.addEventListener('keydown', function(ev) {
     } else {
       player.play();
     }
-    //player.init_audio();
   } else if (ev.code == "ArrowLeft") {
     player.prev();
   } else if (ev.code == "ArrowRight") {
