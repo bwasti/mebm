@@ -1,8 +1,8 @@
 # mebm
 
-[demo (press space to play)](https://bwasti.github.io/mebm/#https%3A%2F%2Fjott.live%2Fraw%2Ftest.json)
+[demo (press space to play)](https://mebm.xyz/#https%3A%2F%2Fjott.live%2Fraw%2Ftest.json)
 
-[empty project](http://bwasti.github.io/mebm)
+[empty project](https://mebm.xyz)
 
 
 mebm is a browser based video editor that supports animation of images and text overlays.
