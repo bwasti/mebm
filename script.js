@@ -670,6 +670,9 @@ class AudioLayer extends RenderedLayer {
       return;
     }
     if (!this.started) {
+      if (!this.source) {
+        init_audio(ref_time);
+      }
       this.source.start(0, time / 1000);
       this.started = true;
     }
@@ -1097,6 +1100,14 @@ class Player {
       layer.disconnect();
     }
     this.total_time = 0;
+    for (let layer of this.layers) {
+      if (layer.start_time + layer.total_time > this.total_time) {
+        this.total_time = layer.start_time + layer.total_time;
+      }
+    }
+    if (this.time > this.total_time) {
+      this.time = this.total_time;
+    }
   }
 
   add(layer) {
