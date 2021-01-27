@@ -1,6 +1,6 @@
 # mebm
 
-[demo (press space to play)](https://mebm.xyz/#https%3A%2F%2Fjott.live%2Fraw%2Ftest.json)
+[tutorial](https://mebm.xyz/#https%3A%2F%2Fjott.live%2Fraw%2Ftutorial.json)
 
 [https://mebm.xyz](https://mebm.xyz) (empty project)
 
