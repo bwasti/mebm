@@ -4,7 +4,7 @@ function backgroundElem(elem) {
 }
 
 const dpr = window.devicePixelRatio || 1;
-const fps = 24;
+const fps = 60;
 
 class RenderedLayer {
   constructor(file) {
@@ -160,18 +160,25 @@ class MoveableLayer extends RenderedLayer {
   adjustTotalTime(diff) {
     this.total_time += diff;
     const num_frames = Math.floor((this.total_time / 1000) * fps - this.frames.length);
-    const anchor = this.nearest_anchor(this.total_time, false);
     if (num_frames > 0) {
       for (let i = 0; i < num_frames; ++i) {
         let f = new Float32Array(5);
-        f[2] = 1;
+        f[2] = 1; // scale
         this.frames.push(f);
       }
     } else if (num_frames < 0) {
       // prevent overflow
       this.frames.splice(this.frames.length + num_frames + 1, 1 - num_frames);
     }
-    this.interpolate(anchor);
+    const next_anchor = this.nearest_anchor(this.total_time, true);
+    const prev_anchor = this.nearest_anchor(this.total_time, false);
+    if (prev_anchor >= 0) {
+      this.interpolate(prev_anchor);
+    } else if (next_anchor >= 0) {
+      this.interpolate(next_anchor);
+    } else {
+      this.interpolate(0);
+    }
   }
 
   set_anchor(index) {
