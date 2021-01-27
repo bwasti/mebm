@@ -2,7 +2,7 @@
 
 [demo (press space to play)](https://mebm.xyz/#https%3A%2F%2Fjott.live%2Fraw%2Ftest.json)
 
-[empty project](https://mebm.xyz)
+[https://mebm.xyz](https://mebm.xyz) (empty project)
 
 
 mebm is a browser based video editor that supports animation of images and text overlays.
