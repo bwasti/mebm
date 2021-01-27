@@ -4,7 +4,40 @@ function backgroundElem(elem) {
 }
 
 const dpr = window.devicePixelRatio || 1;
-const fps = 24;
+let fps = 24;
+let max_size = 4000 * 1e6 / 4; // 4GB max
+
+class Settings {
+  constructor() {
+    this.div = document.createElement('div');
+    this.div.classList.toggle('settings');
+  }
+
+  add(name, type, init, callback) {
+    let label = document.createElement('label');
+    label.textContent = name;
+    let setting = document.createElement('input');
+    setting.addEventListener('change', callback);
+    setting.type = type;
+    init(setting);
+    this.div.appendChild(label);
+    this.div.appendChild(setting);
+  }
+}
+
+function updateSettings() {
+  let settings = new Settings();
+  settings.add('fps', 'text',
+    e => e.value = fps.toFixed(2),
+    e => fps = Number.parseInt(e.target.value)
+    );
+  settings.add('max RAM (in MB)', 'text',
+    e => e.value = (max_size / 1e6).toFixed(2),
+    e => max_size = 1e6 * Number.parseInt(e.target.value)
+    );
+  popup(settings.div);
+}
+
 
 class RenderedLayer {
   constructor(file) {
@@ -409,37 +442,28 @@ class TextLayer extends MoveableLayer {
   init(player, preview) {
     super.init(player, preview);
 
-    let settings = document.createElement('div');
-    settings.classList.toggle('settings');
+    let settings = new Settings();
 
-    let add_setting = (function(name, type, init, callback) {
-      let label = document.createElement('label');
-      label.textContent = name;
-      let setting = document.createElement('input');
-      setting.addEventListener('change', callback.bind(this));
-      setting.type = type;
-      init.bind(this)(setting);
-      settings.appendChild(label);
-      settings.appendChild(setting);
-    }).bind(this);
+    settings.add('text', 'text',
+      i => i.value = this.name,
+      e => this.update_name(e.target.value)
+    );
 
-    add_setting('text', 'text', i => i.value = this.name, function(e) {
-      this.update_name(e.target.value);
-    });
+    settings.add('color', 'color',
+      i => i.value = this.color,
+      e => this.color = e.target.value
+    );
 
-    add_setting('color', 'color', i => i.value = this.color, function(e) {
-      this.color = e.target.value;
-    });
-
-    add_setting('shadow', 'checkbox', i => i.checked = this.shadow, function(e) {
-      this.shadow = e.target.checked;
-    });
+    settings.add('shadow', 'checkbox',
+      i => i.checked = this.shadow,
+      e => this.shadow = e.target.checked
+    );
 
     let settings_link = document.createElement('a');
     settings_link.style.float = "right";
     settings_link.textContent = "[...]";
     settings_link.addEventListener('click', function() {
-      popup(settings);
+      popup(settings.div);
     });
     this.title_div.appendChild(settings_link);
 
@@ -480,8 +504,8 @@ class VideoLayer extends RenderedLayer {
   constructor(file) {
     super(file);
 
-    // assume all videos fit in 1GB of ram
-    this.max_size = 1000 * 1e6 / 4; // 1GB max
+    // assume all videos fit in 4GB of ram
+    this.max_size = max_size;
     this.video = document.createElement('video');
     this.video.setAttribute('autoplay', true);
     this.video.setAttribute('loop', true);
