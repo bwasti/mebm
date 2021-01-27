@@ -203,12 +203,10 @@ class MoveableLayer extends RenderedLayer {
       // prevent overflow
       this.frames.splice(this.frames.length + num_frames + 1, 1 - num_frames);
     }
-    const next_anchor = this.nearest_anchor(this.total_time, true);
-    const prev_anchor = this.nearest_anchor(this.total_time, false);
+    const last_frame_time = this.getTime(this.frames.length - 1);
+    const prev_anchor = this.nearest_anchor(last_frame_time, false);
     if (prev_anchor >= 0) {
       this.interpolate(prev_anchor);
-    } else if (next_anchor >= 0) {
-      this.interpolate(next_anchor);
     } else {
       this.interpolate(0);
     }
