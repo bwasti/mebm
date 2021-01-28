@@ -36,7 +36,8 @@ The design values simplicity and rudimentary functionality over a full feature s
 
 - timeline
   - [ ] allow extending beyond current max time (medium)
-  - [ ] split at play head (medium)
+  - [ ] split audio play head (hard)
+  - [ ] splits in templates (medium)
 - file management
   - [ ] error on bad type (easy)
   - [ ] animated .gif support

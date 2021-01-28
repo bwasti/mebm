@@ -541,16 +541,19 @@ class TextLayer extends MoveableLayer {
 class VideoLayer extends RenderedLayer {
   constructor(file) {
     super(file);
+    this.frames = [];
+    // for creating empty VideoLayers (split() requires this)
+    if (file._leave_empty) {
+      return;
+    }
 
     // assume all videos fit in 4GB of ram
-    this.max_size = max_size;
     this.video = document.createElement('video');
     this.video.setAttribute('autoplay', true);
     this.video.setAttribute('loop', true);
     this.video.setAttribute('playsinline', true);
     this.video.setAttribute('muted', true);
     this.video.setAttribute('controls', true);
-    this.frames = [];
     backgroundElem(this.video);
 
     this.reader = new FileReader();
@@ -561,11 +564,11 @@ class VideoLayer extends RenderedLayer {
         let dur = this.video.duration;
         this.total_time = dur * 1000;
         let size = fps * dur * width * height;
-        if (size < this.max_size) {
+        if (size < max_size) {
           this.width = width;
           this.height = height;
         } else {
-          let scale = size / this.max_size;
+          let scale = size / max_size;
           this.width = Math.floor(width / scale);
           this.height = Math.floor(height / scale);
         }
@@ -659,6 +662,7 @@ class AudioLayer extends RenderedLayer {
       this.audio_ctx.decodeAudioData(buffer, (aud_buffer) => {
         this.audio_buffer = aud_buffer;
         this.total_time = this.audio_buffer.duration * 1000;
+        console.log(aud_buffer);
         if (this.total_time === 0) {
           this.player.remove(this);
         }
@@ -1191,6 +1195,43 @@ class Player {
     return layer;
   }
 
+  split() {
+    if (!this.selected_layer) {
+      return;
+    }
+    let l = this.selected_layer;
+    if (!(l instanceof VideoLayer)) {
+      return;
+    }
+    if (!l.ready) {
+      return;
+    }
+    if (l.start_time > this.time) {
+      return;
+    }
+    if (l.start_time + l.total_time < this.time) {
+      return;
+    }
+    let nl = new VideoLayer({
+      name: l.name + "NEW",
+      _leave_empty: true
+    });
+    const pct = (this.time - l.start_time) / l.total_time;
+    const split_idx = Math.round(pct * l.frames.length);
+    nl.frames = l.frames.splice(0, split_idx);
+    this.add(nl);
+    nl.start_time = l.start_time;
+    nl.total_time = pct * l.total_time;
+    l.start_time = l.start_time + nl.total_time;
+    l.total_time = l.total_time - nl.total_time;
+    nl.width = l.width;
+    nl.height = l.height;
+    nl.canvas.width = l.canvas.width;
+    nl.canvas.height = l.canvas.height;
+    nl.resize(); // fixup thumbnail
+    nl.ready = true;
+  }
+
   onend(callback) {
     this.onend_callback = callback;
   }
@@ -1375,6 +1416,8 @@ window.addEventListener('keydown', function(ev) {
     player.next();
   } else if (ev.code == "Backspace") {
     player.delete_anchor();
+  } else if (ev.code == "KeyS") {
+    player.split();
   } else if (ev.code == "KeyI") {
     if (ev.ctrlKey) {
       let uris = prompt("paste comma separated list of URLs").replace(/ /g, '');
@@ -1386,6 +1429,7 @@ window.addEventListener('keydown', function(ev) {
      exportToJson();
     }
   }
+  console.log(ev.code);
 });
 
 function popup(text) {
