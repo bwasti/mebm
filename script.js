@@ -1406,6 +1406,13 @@ function popup(text) {
 }
 
 window.addEventListener('load', function() {
+  // fix mobile touch
+  document.getElementById('layer_holder').addEventListener("touchmove", function (e) {
+    e.stopPropagation();
+    //e.preventDefault();
+  }, { passive: false });
+  document.getElementById('export').addEventListener('click', download);
+
   if (location.hash) {
     let l = decodeURIComponent(location.hash.substring(1));
     for (let uri of l.split(',')) {
@@ -1429,12 +1436,6 @@ window.addEventListener('load', function() {
     popup(text);
     localStorage.setItem('_seen', 'true');
   }
-  // fix mobile touch
-  document.getElementById('layer_holder').addEventListener("touchmove", function (e) {
-    e.stopPropagation();
-    //e.preventDefault();
-  }, { passive: false });
-  document.getElementById('export').addEventListener('click', download);
 
 });
 
