@@ -772,9 +772,11 @@ class Player {
       }).bind(this));
     this.setupPinchHadler(this.time_holder,
       (function(scale, rotation) {
-       console.log(scale);
+       let new_x = (this.time_holder.clientWidth * scale - this.time_holder.clientWidth);
+       let old_x = this.time_holder.scrollLeft;
        this.time_scale = Math.max(1, this.time_scale * scale);
-       this.resize();
+       this.resize_time();
+       this.time_holder.scroll(Math.round(old_x + new_x), 0);
       }).bind(this));
     this.setupDragHandler();
     this.resize();
@@ -1262,15 +1264,19 @@ class Player {
     }
   }
 
+  resize_time() {
+    this.time_canvas.style.width = this.time_holder.clientWidth * this.time_scale;
+    this.time_canvas.width = this.time_canvas.clientWidth * dpr;
+    this.time_canvas.height = this.time_canvas.clientHeight * dpr;
+    this.time_ctx.scale(dpr, dpr);
+  }
+
   resize() {
     // update canvas and time sizes
     this.canvas.width = this.canvas.clientWidth * dpr;
     this.canvas.height = this.canvas.clientHeight * dpr;
     this.ctx.scale(dpr, dpr);
-    this.time_canvas.style.width = this.time_holder.clientWidth * this.time_scale;
-    this.time_canvas.width = this.time_canvas.clientWidth * dpr;
-    this.time_canvas.height = this.time_canvas.clientHeight * dpr;
-    this.time_ctx.scale(dpr, dpr);
+    this.resize_time();
     for (let layer of this.layers) {
       layer.resize();
     }
