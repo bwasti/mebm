@@ -749,6 +749,7 @@ class Player {
     this.audio_ctx = new AudioContext();
     this.canvas_holder = document.getElementById('canvas');
     this.canvas_holder.appendChild(this.canvas);
+    this.time_scale = 1.0;
     this.time_holder = document.getElementById('time');
     this.time_canvas = document.createElement('canvas');
     this.time_canvas.addEventListener('pointerdown', this.scrubStart.bind(this));
@@ -762,7 +763,19 @@ class Player {
     this.cursor_text = this.cursor_preview.querySelector('div');
     window.requestAnimationFrame(this.loop.bind(this));
 
-    this.setupPinchHadler();
+    this.setupPinchHadler(this.canvas_holder,
+      (function(scale, rotation) {
+        this.update = {
+          scale: scale,
+          rotation: rotation
+        };
+      }).bind(this));
+    this.setupPinchHadler(this.time_holder,
+      (function(scale, rotation) {
+       console.log(scale);
+       this.time_scale = Math.max(1, this.time_scale * scale);
+       this.resize();
+      }).bind(this));
     this.setupDragHandler();
     this.resize();
   }
@@ -843,7 +856,7 @@ class Player {
 
   scrubStart(ev) {
     this.scrubbing = true;
-    let rect = this.time_holder.getBoundingClientRect();
+    let rect = this.time_canvas.getBoundingClientRect();
     this.time = ev.offsetX / rect.width * this.total_time;
 
     window.addEventListener('pointerup', this.scrubEnd.bind(this), {
@@ -908,7 +921,7 @@ class Player {
   scrubMove(ev) {
     ev.preventDefault();
     ev.stopPropagation();
-    let rect = this.time_holder.getBoundingClientRect();
+    let rect = this.time_canvas.getBoundingClientRect();
     let time = ev.offsetX / rect.width * this.total_time;
 
     document.body.style.cursor = "default";
@@ -951,23 +964,14 @@ class Player {
     this.aux_time = 0;
   }
 
-  setupPinchHadler() {
-    let elem = this.canvas_holder;
-
-    let callback = (function(scale, rotation) {
-      this.update = {
-        scale: scale,
-        rotation: rotation
-      };
-    }).bind(this);
-
+  setupPinchHadler(elem, callback) {
     // safari only
     let gestureStartRotation = 0;
     let gestureStartScale = 0;
 
     let wheel = function(e) {
-      e.preventDefault();
       if (e.ctrlKey || e.shiftKey) {
+        e.preventDefault();
         let delta = e.deltaY;
         if (!Math.abs(delta) && e.deltaX != 0) {
           delta = e.deltaX * 0.5;
@@ -1263,6 +1267,7 @@ class Player {
     this.canvas.width = this.canvas.clientWidth * dpr;
     this.canvas.height = this.canvas.clientHeight * dpr;
     this.ctx.scale(dpr, dpr);
+    this.time_canvas.style.width = this.time_holder.clientWidth * this.time_scale;
     this.time_canvas.width = this.time_canvas.clientWidth * dpr;
     this.time_canvas.height = this.time_canvas.clientHeight * dpr;
     this.time_ctx.scale(dpr, dpr);
@@ -1298,8 +1303,8 @@ class Player {
     this.time_ctx.fillStyle = `rgb(210,210,210)`;
     this.time_ctx.fillRect(x, 0, 2, this.time_canvas.clientHeight);
     this.time_ctx.font = "10px courier";
-    this.time_ctx.fillText(this.time.toFixed(2), 5, 10);
-    this.time_ctx.fillText(this.total_time.toFixed(2), 5, 20);
+    this.time_ctx.fillText(this.time.toFixed(2), x + 5, 10);
+    this.time_ctx.fillText(this.total_time.toFixed(2), x + 5, 20);
 
     if (this.aux_time > 0) {
       let aux_x = this.time_canvas.clientWidth * this.aux_time / this.total_time;
