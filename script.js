@@ -511,7 +511,6 @@ class TextLayer extends MoveableLayer {
     let rect = this.ctx.measureText(this.name);
     this.width = rect.width;
     this.height = rect.actualBoundingBoxAscent + rect.actualBoundingBoxDescent;
-    console.log(this.width, this.height);
     super.update(change, ref_time);
   }
 
@@ -670,7 +669,6 @@ class AudioLayer extends RenderedLayer {
       this.audio_ctx.decodeAudioData(buffer, (aud_buffer) => {
         this.audio_buffer = aud_buffer;
         this.total_time = this.audio_buffer.duration * 1000;
-        console.log(aud_buffer);
         if (this.total_time === 0) {
           this.player.remove(this);
         }
@@ -1437,7 +1435,6 @@ window.addEventListener('keydown', function(ev) {
      exportToJson();
     }
   }
-  console.log(ev.code);
 });
 
 function popup(text) {
