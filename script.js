@@ -507,6 +507,14 @@ class TextLayer extends MoveableLayer {
 
   }
 
+  update(change, ref_time) {
+    let rect = this.ctx.measureText(this.name);
+    this.width = rect.width;
+    this.height = rect.actualBoundingBoxAscent + rect.actualBoundingBoxDescent;
+    console.log(this.width, this.height);
+    super.update(change, ref_time);
+  }
+
   render(ctx_out, ref_time) {
     let f = this.getFrame(ref_time);
     if (f) {
@@ -1450,6 +1458,12 @@ function popup(text) {
 }
 
 window.addEventListener('load', function() {
+  // traffic public here: https://jott.live/stat?path=/raw/mebm_hit
+  var xhr = new XMLHttpRequest();
+  let uri = "https://jott.live/raw/mebm_hit";
+  xhr.open("GET", url, true);
+  xhr.send(null);
+  
   // fix mobile touch
   document.getElementById('layer_holder').addEventListener("touchmove", function (e) {
     e.stopPropagation();
