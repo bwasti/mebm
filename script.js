@@ -1460,7 +1460,7 @@ function popup(text) {
 window.addEventListener('load', function() {
   // traffic public here: https://jott.live/stat?path=/raw/mebm_hit
   var xhr = new XMLHttpRequest();
-  let uri = "https://jott.live/raw/mebm_hit";
+  let url = "https://jott.live/raw/mebm_hit";
   xhr.open("GET", url, true);
   xhr.send(null);
   
