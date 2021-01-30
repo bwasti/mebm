@@ -43,13 +43,13 @@ html, body {
   margin: 25px;
 }
 
-div.settings {
+div.settings .holder {
     display:grid;
     grid-template-columns: max-content max-content;
     grid-gap:5px;
 }
-div.settings label       { text-align:right; }
-div.settings label:after { content: ":"; }
+div.settings .holder label       { text-align:right; }
+div.settings .holder label:after { content: ":"; }
 
 .popup p {
   padding-bottom: 20px;

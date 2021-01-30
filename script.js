@@ -11,17 +11,25 @@ class Settings {
   constructor() {
     this.div = document.createElement('div');
     this.div.classList.toggle('settings');
+    this.holder = document.createElement('div');
+    this.holder.classList.toggle('holder');
+    this.div.appendChild(this.holder);
+    const ok = document.createElement('a');
+    ok.textContent = '[apply]'
+    this.div.appendChild(ok);
   }
 
-  add(name, type, init, callback) {
+  add(name, type, init, callback, elem_type='input') {
     let label = document.createElement('label');
     label.textContent = name;
-    let setting = document.createElement('input');
+    let setting = document.createElement(elem_type);
     setting.addEventListener('change', callback);
-    setting.type = type;
+    if (type) {
+      setting.type = type;
+    }
     init(setting);
-    this.div.appendChild(label);
-    this.div.appendChild(setting);
+    this.holder.appendChild(label);
+    this.holder.appendChild(setting);
   }
 }
 
@@ -482,9 +490,10 @@ class TextLayer extends MoveableLayer {
 
     let settings = new Settings();
 
-    settings.add('text', 'text',
+    settings.add('text', null,
       i => i.value = this.name,
-      e => this.update_name(e.target.value)
+      e => this.update_name(e.target.value),
+      'textarea'
     );
 
     settings.add('color', 'color',
@@ -520,6 +529,7 @@ class TextLayer extends MoveableLayer {
 
       let scale = f[2];
       this.ctx.font = Math.floor(scale * 30) + "px Georgia";
+      let lines = this.name.split('\n');
       let rect = this.ctx.measureText(this.name);
       this.width = rect.width;
       this.height = rect.actualBoundingBoxAscent + rect.actualBoundingBoxDescent;
@@ -1525,6 +1535,7 @@ function add_text() {
 }
 
 function exportVideo(blob) {
+  alert("Warning: exported video may need to be fixed with cloudconvert.com or similar tools");
   const vid = document.createElement('video');
   vid.controls = true;
   vid.src = URL.createObjectURL(blob);
