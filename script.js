@@ -1391,9 +1391,49 @@ function exportVideo(blob) {
   vid.currentTime = Number.MAX_SAFE_INTEGER;
 }
 
+function uploadSupportedType(files) {
+  let supportedType = [
+    'mp4', 
+    'ogg', 
+    'x-matroska', 
+    'webm', 
+    'mp3', 
+    'png' ,
+    'mpeg4',
+    'mpeg',
+    'ogv',
+    'webm',
+    'gif',
+    'jpg',
+    'jpeg',
+    'webp',
+    'aac',
+    'mp3',
+    'oga',
+    'wav',
+    'weba',
+  ];
+
+  let badUserExtensions = [];
+
+  for (let file of files) {
+    let extension = file.name.split('.').pop();
+    if (!supportedType.includes(extension)) {
+      badUserExtensions.push(file)
+    }
+  }
+
+  (badUserExtensions.length > 0)?
+  alert('the file(s) you are uploading is not supported \n' 
+  + badUserExtensions.map((ext)=>"- "+ext.name).join('\n')):"";
+
+  return !badUserExtensions.length > 0
+}
+
 function upload() {
   let f = document.getElementById('filepicker');
   f.addEventListener('input', function(e) {
+    if(!uploadSupportedType(e.target.files)){return}
     for (let file of e.target.files) {
       player.addFile(file);
     }
