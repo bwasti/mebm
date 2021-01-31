@@ -1424,7 +1424,7 @@ function uploadSupportedType(files) {
   }
 
   (badUserExtensions.length > 0)?
-  alert('the file(s) you are uploading are not supported \n' 
+  alert('the file(s) you uploaded are not supported \n' 
   + badUserExtensions.map((ext)=>"- "+ext.name).join('\n')):"";
 
   return !badUserExtensions.length > 0
