@@ -1506,7 +1506,7 @@ window.addEventListener('load', function() {
       <br>
       to start, drag in or paste URLs to videos and images.
       <br>
-      a demo can be found <a href="https://bwasti.github.io/mebm/#https%3A%2F%2Fjott.live%2Fraw%2Ftest.json" target="_blank">here</a>
+      a demo can be found <a href="https://mebm.xyz/#https%3A%2F%2Fjott.live%2Fraw%2Ftutorial.json" target="_blank">here</a>
       and usage information <a href="https://github.com/bwasti/mebm#usage" target="_blank">here</a>.
       `;
     popup(text);
