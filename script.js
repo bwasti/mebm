@@ -5,6 +5,24 @@ function backgroundElem(elem) {
 
 const dpr = window.devicePixelRatio || 1;
 const fps = 24;
+// todo: add more types
+const ext_map = {
+  'mp4': 'video/mp4',
+  'mpeg4': 'video/mp4',
+  'mpeg': 'video/mpeg',
+  'ogv': 'video/ogg',
+  'webm': 'video/webm',
+  'gif': 'image/gif',
+  'jpg': 'image/jpeg',
+  'jpeg': 'image/jpeg',
+  'png': 'image/png',
+  'webp': 'image/webp',
+  'aac': 'audio/aac',
+  'mp3': 'audio/mpeg',
+  'oga': 'audio/ogg',
+  'wav': 'audio/wav',
+  'weba': 'audio/webm',
+  };
 
 class RenderedLayer {
   constructor(file) {
@@ -1188,24 +1206,7 @@ class Player {
       return;
     }
     let extension = uri.split(/[#?]/)[0].split('.').pop().trim();
-    // todo: add more types
-    const ext_map = {
-      'mp4': 'video/mp4',
-      'mpeg4': 'video/mp4',
-      'mpeg': 'video/mpeg',
-      'ogv': 'video/ogg',
-      'webm': 'video/webm',
-      'gif': 'image/gif',
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'png': 'image/png',
-      'webp': 'image/webp',
-      'aac': 'audio/aac',
-      'mp3': 'audio/mpeg',
-      'oga': 'audio/ogg',
-      'wav': 'audio/wav',
-      'weba': 'audio/webm',
-    };
+
     if (!ext_map[extension]) {
       if (extension == 'json') {
         let response = await fetch(uri);
@@ -1392,42 +1393,23 @@ function exportVideo(blob) {
 }
 
 function uploadSupportedType(files) {
-  let supportedType = [
-    'mp4', 
-    'ogg', 
-    'x-matroska', 
-    'webm', 
-    'mp3', 
-    'png' ,
-    'mpeg4',
-    'mpeg',
-    'ogv',
-    'webm',
-    'gif',
-    'jpg',
-    'jpeg',
-    'webp',
-    'aac',
-    'mp3',
-    'oga',
-    'wav',
-    'weba',
-  ];
 
   let badUserExtensions = [];
 
   for (let file of files) {
     let extension = file.name.split('.').pop();
-    if (!supportedType.includes(extension)) {
+    if (!(extension in ext_map)) {
       badUserExtensions.push(file)
     }
   }
 
-  (badUserExtensions.length > 0)?
+  if (badUserExtensions.length) {
+  const badFiles = badUserExtensions.map((ext)=>"- "+ext.name).join('<br>');
   alert('the file(s) you uploaded are not supported \n' 
-  + badUserExtensions.map((ext)=>"- "+ext.name).join('\n')):"";
+  + badFiles);
 
   return !badUserExtensions.length > 0
+  }
 }
 
 function upload() {
