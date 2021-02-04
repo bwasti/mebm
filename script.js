@@ -1404,11 +1404,16 @@ function uploadSupportedType(files) {
   }
 
   if (badUserExtensions.length) {
-  const badFiles = badUserExtensions.map((ext)=>"- "+ext.name).join('<br>');
-  alert('the file(s) you uploaded are not supported \n' 
-  + badFiles);
-
-  return !badUserExtensions.length > 0
+    const badFiles = badUserExtensions.map((ext)=>"- "+ext.name).join('<br>');
+    const text = document.createElement('div');
+    text.style.textAlign = "left";
+    text.innerHTML = `
+    the file(s) you uploaded are not supported :
+    <br>
+    <br>
+    ${badFiles}
+    `;
+    popup(text);
   }
 }
 
