@@ -6,6 +6,7 @@ function backgroundElem(elem) {
 const dpr = window.devicePixelRatio || 1;
 let fps = 24;
 let max_size = 4000 * 1e6 / 4; // 4GB max
+
 // todo: add more types
 const ext_map = {
   'mp4': 'video/mp4',
