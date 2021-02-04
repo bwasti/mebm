@@ -26,6 +26,86 @@ const ext_map = {
   'weba': 'audio/webm',
   };
 
+class Settings {
+  constructor() {
+    this.div = document.createElement('div');
+    this.div.classList.toggle('settings');
+    this.holder = document.createElement('div');
+    this.holder.classList.toggle('holder');
+    this.div.appendChild(this.holder);
+    const ok = document.createElement('a');
+    ok.textContent = '[apply]'
+    this.div.appendChild(ok);
+  }
+
+  add(name, type, init, callback, elem_type='input') {
+    let label = document.createElement('label');
+    label.textContent = name;
+    let setting = document.createElement(elem_type);
+    setting.addEventListener('change', callback);
+    if (type) {
+      setting.type = type;
+    }
+    init(setting);
+    this.holder.appendChild(label);
+    this.holder.appendChild(setting);
+  }
+}
+
+function updateSettings() {
+  let settings = new Settings();
+  settings.add('fps', 'text',
+    e => e.value = fps.toFixed(2),
+    e => fps = Number.parseInt(e.target.value)
+    );
+  settings.add('max RAM (in MB)', 'text',
+    e => e.value = (max_size / 1e6).toFixed(2),
+    e => max_size = 1e6 * Number.parseInt(e.target.value)
+    );
+  popup(settings.div);
+}
+
+function exportToJson() {
+  var xhr = new XMLHttpRequest();
+  const date = new Date().getTime();
+  const str = date + "_" + Math.floor(Math.random() * 1000) + ".json";
+  const url = "https://jott.live/save/note/"+ str + "/mebm";
+  xhr.open("POST", url, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.send(JSON.stringify({
+    note: player.dumpToJson()
+  }));
+  let uri = encodeURIComponent("https://jott.live/raw/" + str);
+  let mebm_url = window.location + "#" + uri;
+  const text = document.createElement('div');
+  const preamble = document.createElement('span');
+  preamble.textContent = "copy the link below to share:";
+  const a = document.createElement('a');
+  a.href = mebm_url;
+  a.setAttribute("target", "_blank");
+  a.textContent = "[link]";
+
+  const json = document.createElement('pre');
+  json.textContent = player.dumpToJson();
+  json.style.overflow = 'scroll';
+  json.style.wordBreak = 'break-all';
+  json.style.height = '50%';
+  text.appendChild(preamble);
+  text.appendChild(document.createElement('br'));
+  text.appendChild(document.createElement('br'));
+  text.appendChild(a);
+  text.appendChild(document.createElement('br'));
+  text.appendChild(document.createElement('br'));
+  const preamble2 = document.createElement('span');
+  preamble2.textContent = "or save and host the JSON below";
+  text.appendChild(preamble2);
+  text.appendChild(document.createElement('br'));
+  text.appendChild(document.createElement('br'));
+  text.appendChild(json);
+  popup(text);
+}
+
+
 class RenderedLayer {
   constructor(file) {
     this.name = file.name;
@@ -76,7 +156,23 @@ class RenderedLayer {
     this.description.textContent = "\"" + this.name + "\"";
   }
 
-  setup_preview() {
+  init(player, preview) {
+    this.player = player;
+    this.preview = preview;
+    this.canvas.width = this.player.width;
+    this.canvas.height = this.player.height;
+    this.title_div = this.preview.querySelector('.preview_title');
+
+    this.description = document.createElement('span');
+    this.description.classList.toggle('description');
+    this.description.addEventListener('click', (function(e) {
+      const new_text = prompt("enter new text");
+      if (new_text) {
+        this.update_name(new_text);
+      }
+    }).bind(this));
+    this.title_div.appendChild(this.description);
+
     let delete_option = document.createElement('a');
     delete_option.textContent = '[x]';
     delete_option.style.float = "right";
@@ -86,28 +182,11 @@ class RenderedLayer {
       }
     }).bind(this));
     this.title_div.appendChild(delete_option);
-    this.description.classList.toggle('description');
-    this.update_name(this.name);
-    this.description.addEventListener('click', (function(e) {
-      const new_text = prompt("enter new text");
-      if (new_text) {
-        this.update_name(new_text);
-      }
-    }).bind(this));
-  }
 
-  init(player, preview) {
-    this.player = player;
-    this.preview = preview;
-    this.canvas.width = this.player.width;
-    this.canvas.height = this.player.height;
-    this.title_div = this.preview.querySelector('.preview_title');
-    this.description = document.createElement('span');
-    this.title_div.appendChild(this.description);
     this.thumb_canvas = this.preview.querySelector('.preview_thumb');
     this.thumb_ctx = this.thumb_canvas.getContext('2d');
     this.thumb_ctx.scale(dpr, dpr);
-    this.setup_preview();
+    this.update_name(this.name);
   }
 
   render_time(ctx, y_coord, width, selected) {
@@ -181,31 +260,36 @@ class MoveableLayer extends RenderedLayer {
   adjustTotalTime(diff) {
     this.total_time += diff;
     const num_frames = Math.floor((this.total_time / 1000) * fps - this.frames.length);
-    const anchor = this.nearest_anchor(this.total_time, false);
     if (num_frames > 0) {
       for (let i = 0; i < num_frames; ++i) {
         let f = new Float32Array(5);
-        f[2] = 1;
+        f[2] = 1; // scale
         this.frames.push(f);
       }
     } else if (num_frames < 0) {
       // prevent overflow
       this.frames.splice(this.frames.length + num_frames + 1, 1 - num_frames);
     }
-    this.interpolate(anchor);
+    const last_frame_time = this.getTime(this.frames.length - 1);
+    const prev_anchor = this.nearest_anchor(last_frame_time, false);
+    if (prev_anchor >= 0) {
+      this.interpolate(prev_anchor);
+    } else {
+      this.interpolate(0);
+    }
   }
 
   set_anchor(index) {
-    this.frames[index][3] = 1;
+    this.frames[index][4] = 1;
   }
 
   is_anchor(index) {
-    return this.frames[index][3];
+    return this.frames[index][4];
   }
 
   delete_anchor(ref_time) {
     let i = this.getIndex(ref_time);
-    this.frames[i][3] = 0;
+    this.frames[i][4] = 0;
     let prev_i = this.nearest_anchor(ref_time, false);
     this.interpolate(prev_i);
   }
@@ -222,7 +306,7 @@ class MoveableLayer extends RenderedLayer {
       };
       inc();
       while (i >= 0 && i < this.frames.length) {
-        if (this.frames[i][3]) {
+        if (this.is_anchor(i)) {
           return i;
         }
         inc();
@@ -242,6 +326,7 @@ class MoveableLayer extends RenderedLayer {
     f[0] = weight * f0[0] + (1 - weight) * f1[0];
     f[1] = weight * f0[1] + (1 - weight) * f1[1];
     f[2] = weight * f0[2] + (1 - weight) * f1[2];
+    f[3] = weight * f0[3] + (1 - weight) * f1[3];
     return f;
   }
 
@@ -351,6 +436,11 @@ class MoveableLayer extends RenderedLayer {
       this.interpolate(index);
       this.set_anchor(index);
     }
+    if (change.rotation) {
+      this.frames[index][3] = f[3] + change.rotation;
+      this.interpolate(index);
+      this.set_anchor(index);
+    }
   }
 
   // moveable layers have anchor points we'll want to show
@@ -417,47 +507,48 @@ class TextLayer extends MoveableLayer {
   init(player, preview) {
     super.init(player, preview);
 
-    let settings = document.createElement('div');
-    settings.classList.toggle('settings');
+    let settings = new Settings();
 
-    let add_setting = (function(name, type, init, callback) {
-      let label = document.createElement('label');
-      label.textContent = name;
-      let setting = document.createElement('input');
-      setting.addEventListener('change', callback.bind(this));
-      setting.type = type;
-      init.bind(this)(setting);
-      settings.appendChild(label);
-      settings.appendChild(setting);
-    }).bind(this);
+    settings.add('text', null,
+      i => i.value = this.name,
+      e => this.update_name(e.target.value),
+      'textarea'
+    );
 
-    add_setting('text', 'text', i => i.value = this.name, function(e) {
-      this.update_name(e.target.value);
-    });
+    settings.add('color', 'color',
+      i => i.value = this.color,
+      e => this.color = e.target.value
+    );
 
-    add_setting('color', 'color', i => i.value = this.color, function(e) {
-      this.color = e.target.value;
-    });
-
-    add_setting('shadow', 'checkbox', i => i.checked = this.shadow, function(e) {
-      this.shadow = e.target.checked;
-    });
+    settings.add('shadow', 'checkbox',
+      i => i.checked = this.shadow,
+      e => this.shadow = e.target.checked
+    );
 
     let settings_link = document.createElement('a');
     settings_link.style.float = "right";
     settings_link.textContent = "[...]";
     settings_link.addEventListener('click', function() {
-      popup(settings);
+      popup(settings.div);
     });
     this.title_div.appendChild(settings_link);
 
   }
 
+  update(change, ref_time) {
+    let rect = this.ctx.measureText(this.name);
+    this.width = rect.width;
+    this.height = rect.actualBoundingBoxAscent + rect.actualBoundingBoxDescent;
+    super.update(change, ref_time);
+  }
+
   render(ctx_out, ref_time) {
     let f = this.getFrame(ref_time);
     if (f) {
+
       let scale = f[2];
       this.ctx.font = Math.floor(scale * 30) + "px Georgia";
+      let lines = this.name.split('\n');
       let rect = this.ctx.measureText(this.name);
       this.width = rect.width;
       this.height = rect.actualBoundingBoxAscent + rect.actualBoundingBoxDescent;
@@ -472,7 +563,12 @@ class TextLayer extends MoveableLayer {
       }
       this.ctx.fillStyle = this.color;
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.ctx.fillText(this.name, x, y);
+      this.ctx.save();
+      this.ctx.translate(x, y);
+      this.ctx.rotate(f[3] * (Math.PI / 180));
+      this.ctx.textAlign = "center";
+      this.ctx.fillText(this.name, 0, 0);
+      this.ctx.restore();
       this.drawScaled(this.ctx, ctx_out);
     }
   }
@@ -481,16 +577,19 @@ class TextLayer extends MoveableLayer {
 class VideoLayer extends RenderedLayer {
   constructor(file) {
     super(file);
+    this.frames = [];
+    // for creating empty VideoLayers (split() requires this)
+    if (file._leave_empty) {
+      return;
+    }
 
-    // assume all videos fit in 1GB of ram
-    this.max_size = 1000 * 1e6 / 4; // 1GB max
+    // assume all videos fit in 4GB of ram
     this.video = document.createElement('video');
     this.video.setAttribute('autoplay', true);
     this.video.setAttribute('loop', true);
     this.video.setAttribute('playsinline', true);
     this.video.setAttribute('muted', true);
     this.video.setAttribute('controls', true);
-    this.frames = [];
     backgroundElem(this.video);
 
     this.reader = new FileReader();
@@ -501,11 +600,11 @@ class VideoLayer extends RenderedLayer {
         let dur = this.video.duration;
         this.total_time = dur * 1000;
         let size = fps * dur * width * height;
-        if (size < this.max_size) {
+        if (size < max_size) {
           this.width = width;
           this.height = height;
         } else {
-          let scale = size / this.max_size;
+          let scale = size / max_size;
           this.width = Math.floor(width / scale);
           this.height = Math.floor(height / scale);
         }
@@ -562,8 +661,7 @@ class VideoLayer extends RenderedLayer {
     this.ready = true;
     this.video.remove();
     this.video = null;
-    this.name = name;
-    this.setup_preview();
+    this.update_name(name);
   }
 
   render(ctx_out, ref_time) {
@@ -611,10 +709,14 @@ class AudioLayer extends RenderedLayer {
     this.reader.readAsArrayBuffer(file);
   }
 
-  init_audio(ref_time) {
+  disconnect() {
     if (this.source) {
       this.source.disconnect(this.player.audio_ctx.destination);
     }
+  }
+
+  init_audio(ref_time) {
+    this.disconnect();
     this.source = this.player.audio_ctx.createBufferSource();
     this.source.buffer = this.audio_buffer;
     this.source.connect(this.player.audio_ctx.destination);
@@ -645,6 +747,9 @@ class AudioLayer extends RenderedLayer {
       return;
     }
     if (!this.started) {
+      if (!this.source) {
+        init_audio(ref_time);
+      }
       this.source.start(0, time / 1000);
       this.started = true;
     }
@@ -673,6 +778,7 @@ class Player {
     this.audio_ctx = new AudioContext();
     this.canvas_holder = document.getElementById('canvas');
     this.canvas_holder.appendChild(this.canvas);
+    this.time_scale = 1.0;
     this.time_holder = document.getElementById('time');
     this.time_canvas = document.createElement('canvas');
     this.time_canvas.addEventListener('pointerdown', this.scrubStart.bind(this));
@@ -686,7 +792,21 @@ class Player {
     this.cursor_text = this.cursor_preview.querySelector('div');
     window.requestAnimationFrame(this.loop.bind(this));
 
-    this.setupPinchHadler();
+    this.setupPinchHadler(this.canvas_holder,
+      (function(scale, rotation) {
+        this.update = {
+          scale: scale,
+          rotation: rotation
+        };
+      }).bind(this));
+    this.setupPinchHadler(this.time_holder,
+      (function(scale, rotation) {
+       let new_x = (this.time_holder.clientWidth * scale - this.time_holder.clientWidth);
+       let old_x = this.time_holder.scrollLeft;
+       this.time_scale = Math.max(1, this.time_scale * scale);
+       this.resize_time();
+       this.time_holder.scroll(Math.round(old_x + new_x), 0);
+      }).bind(this));
     this.setupDragHandler();
     this.resize();
   }
@@ -767,7 +887,7 @@ class Player {
 
   scrubStart(ev) {
     this.scrubbing = true;
-    let rect = this.time_holder.getBoundingClientRect();
+    let rect = this.time_canvas.getBoundingClientRect();
     this.time = ev.offsetX / rect.width * this.total_time;
 
     window.addEventListener('pointerup', this.scrubEnd.bind(this), {
@@ -832,7 +952,7 @@ class Player {
   scrubMove(ev) {
     ev.preventDefault();
     ev.stopPropagation();
-    let rect = this.time_holder.getBoundingClientRect();
+    let rect = this.time_canvas.getBoundingClientRect();
     let time = ev.offsetX / rect.width * this.total_time;
 
     document.body.style.cursor = "default";
@@ -875,23 +995,14 @@ class Player {
     this.aux_time = 0;
   }
 
-  setupPinchHadler() {
-    let elem = this.canvas_holder;
-
-    let callback = (function(scale, rotation) {
-      this.update = {
-        scale: scale,
-        rotation: rotation
-      };
-    }).bind(this);
-
+  setupPinchHadler(elem, callback) {
     // safari only
     let gestureStartRotation = 0;
     let gestureStartScale = 0;
 
     let wheel = function(e) {
-      e.preventDefault();
       if (e.ctrlKey || e.shiftKey) {
+        e.preventDefault();
         let delta = e.deltaY;
         if (!Math.abs(delta) && e.deltaX != 0) {
           delta = e.deltaX * 0.5;
@@ -900,6 +1011,14 @@ class Player {
         scale -= delta * 0.01;
         // Your zoom/scale factor
         callback(scale, 0);
+      } else if (e.altKey) {
+        let delta = e.deltaY;
+        if (!Math.abs(delta) && e.deltaX != 0) {
+          delta = e.deltaX * 0.5;
+        }
+        let rot = -delta * 0.1;
+        // Your zoom/scale factor
+        callback(0, rot);
       }
     }
     // safari
@@ -1060,7 +1179,18 @@ class Player {
       // divs are reversed
       layer_picker.children[len - idx - 1].remove();
     }
+    if (layer instanceof AudioLayer) {
+      layer.disconnect();
+    }
     this.total_time = 0;
+    for (let layer of this.layers) {
+      if (layer.start_time + layer.total_time > this.total_time) {
+        this.total_time = layer.start_time + layer.total_time;
+      }
+    }
+    if (this.time > this.total_time) {
+      this.time = this.total_time;
+    }
   }
 
   add(layer) {
@@ -1106,6 +1236,43 @@ class Player {
     return layer;
   }
 
+  split() {
+    if (!this.selected_layer) {
+      return;
+    }
+    let l = this.selected_layer;
+    if (!(l instanceof VideoLayer)) {
+      return;
+    }
+    if (!l.ready) {
+      return;
+    }
+    if (l.start_time > this.time) {
+      return;
+    }
+    if (l.start_time + l.total_time < this.time) {
+      return;
+    }
+    let nl = new VideoLayer({
+      name: l.name + "NEW",
+      _leave_empty: true
+    });
+    const pct = (this.time - l.start_time) / l.total_time;
+    const split_idx = Math.round(pct * l.frames.length);
+    nl.frames = l.frames.splice(0, split_idx);
+    this.add(nl);
+    nl.start_time = l.start_time;
+    nl.total_time = pct * l.total_time;
+    l.start_time = l.start_time + nl.total_time;
+    l.total_time = l.total_time - nl.total_time;
+    nl.width = l.width;
+    nl.height = l.height;
+    nl.canvas.width = l.canvas.width;
+    nl.canvas.height = l.canvas.height;
+    nl.resize(); // fixup thumbnail
+    nl.ready = true;
+  }
+
   onend(callback) {
     this.onend_callback = callback;
   }
@@ -1126,14 +1293,19 @@ class Player {
     }
   }
 
+  resize_time() {
+    this.time_canvas.style.width = this.time_holder.clientWidth * this.time_scale;
+    this.time_canvas.width = this.time_canvas.clientWidth * dpr;
+    this.time_canvas.height = this.time_canvas.clientHeight * dpr;
+    this.time_ctx.scale(dpr, dpr);
+  }
+
   resize() {
     // update canvas and time sizes
     this.canvas.width = this.canvas.clientWidth * dpr;
     this.canvas.height = this.canvas.clientHeight * dpr;
     this.ctx.scale(dpr, dpr);
-    this.time_canvas.width = this.time_canvas.clientWidth * dpr;
-    this.time_canvas.height = this.time_canvas.clientHeight * dpr;
-    this.time_ctx.scale(dpr, dpr);
+    this.resize_time();
     for (let layer of this.layers) {
       layer.resize();
     }
@@ -1166,8 +1338,8 @@ class Player {
     this.time_ctx.fillStyle = `rgb(210,210,210)`;
     this.time_ctx.fillRect(x, 0, 2, this.time_canvas.clientHeight);
     this.time_ctx.font = "10px courier";
-    this.time_ctx.fillText(this.time.toFixed(2), 5, 10);
-    this.time_ctx.fillText(this.total_time.toFixed(2), 5, 20);
+    this.time_ctx.fillText(this.time.toFixed(2), x + 5, 10);
+    this.time_ctx.fillText(this.total_time.toFixed(2), x + 5, 20);
 
     if (this.aux_time > 0) {
       let aux_x = this.time_canvas.clientWidth * this.aux_time / this.total_time;
@@ -1267,13 +1439,14 @@ window.addEventListener('keydown', function(ev) {
     } else {
       player.play();
     }
-    //player.init_audio();
   } else if (ev.code == "ArrowLeft") {
     player.prev();
   } else if (ev.code == "ArrowRight") {
     player.next();
   } else if (ev.code == "Backspace") {
     player.delete_anchor();
+  } else if (ev.code == "KeyS") {
+    player.split();
   } else if (ev.code == "KeyI") {
     if (ev.ctrlKey) {
       let uris = prompt("paste comma separated list of URLs").replace(/ /g, '');
@@ -1282,25 +1455,16 @@ window.addEventListener('keydown', function(ev) {
     }
   } else if (ev.code == "KeyJ") {
     if (ev.ctrlKey) {
-      const text = document.createElement('div');
-      const preamble = document.createElement('span');
-      preamble.textContent = "host the below JSON to share the project";
-      const json = document.createElement('pre');
-      json.textContent = player.dumpToJson();
-      json.style.overflow = 'scroll';
-      json.style.wordBreak = 'break-all';
-      json.style.height = '50%';
-      text.appendChild(preamble);
-      text.appendChild(document.createElement('br'));
-      text.appendChild(document.createElement('br'));
-      text.appendChild(json);
-      popup(text);
+     exportToJson();
     }
   }
 });
 
 function popup(text) {
   const div = document.createElement('div');
+  div.addEventListener('keydown', function(ev) {
+    ev.stopPropagation();
+  });
   const close = document.createElement('a');
   close.addEventListener('click', function() {
     div.remove();
@@ -1314,6 +1478,19 @@ function popup(text) {
 }
 
 window.addEventListener('load', function() {
+  // traffic public here: https://jott.live/stat?path=/raw/mebm_hit
+  var xhr = new XMLHttpRequest();
+  let url = "https://jott.live/raw/mebm_hit";
+  xhr.open("GET", url, true);
+  xhr.send(null);
+  
+  // fix mobile touch
+  document.getElementById('layer_holder').addEventListener("touchmove", function (e) {
+    e.stopPropagation();
+    //e.preventDefault();
+  }, { passive: false });
+  document.getElementById('export').addEventListener('click', download);
+
   if (location.hash) {
     let l = decodeURIComponent(location.hash.substring(1));
     for (let uri of l.split(',')) {
@@ -1331,17 +1508,12 @@ window.addEventListener('load', function() {
       <br>
       to start, drag in or paste URLs to videos and images.
       <br>
-      a demo can be found <a href="https://bwasti.github.io/mebm/#https%3A%2F%2Fjott.live%2Fraw%2Ftest.json" target="_blank">here</a>
+      a demo can be found <a href="https://mebm.xyz/#https%3A%2F%2Fjott.live%2Fraw%2Ftutorial.json" target="_blank">here</a>
       and usage information <a href="https://github.com/bwasti/mebm#usage" target="_blank">here</a>.
       `;
     popup(text);
     localStorage.setItem('_seen', 'true');
   }
-  // fix mobile touch
-  document.getElementById('layer_holder').addEventListener("touchmove", function (e) {
-    e.stopPropagation();
-    //e.preventDefault();
-  }, { passive: false });
 
 });
 
@@ -1365,6 +1537,7 @@ function add_text() {
 }
 
 function exportVideo(blob) {
+  alert("Warning: exported video may need to be fixed with cloudconvert.com or similar tools");
   const vid = document.createElement('video');
   vid.controls = true;
   vid.src = URL.createObjectURL(blob);
@@ -1472,7 +1645,11 @@ function getSupportedMimeTypes() {
   return supportedTypes;
 }
 
-function download() {
+function download(ev) {
+  if (ev.shiftKey) {
+    exportToJson();
+    return;
+  }
   if (player.layers.length == 0) {
     alert("nothing to export");
     return;

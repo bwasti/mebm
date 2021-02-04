@@ -1,8 +1,8 @@
 # mebm
 
-[demo (press space to play)](https://bwasti.github.io/mebm/#https%3A%2F%2Fjott.live%2Fraw%2Ftest.json)
+[tutorial](https://mebm.xyz/#https%3A%2F%2Fjott.live%2Fraw%2Ftutorial.json)
 
-[empty project](http://bwasti.github.io/mebm)
+[https://mebm.xyz](https://mebm.xyz) (empty project)
 
 
 mebm is a browser based video editor that supports animation of images and text overlays.
@@ -36,7 +36,8 @@ The design values simplicity and rudimentary functionality over a full feature s
 
 - timeline
   - [ ] allow extending beyond current max time (medium)
-  - [ ] split at play head (medium)
+  - [ ] split audio play head (hard)
+  - [ ] splits in templates (medium)
 - file management
   - [ ] error on bad type (easy)
   - [ ] animated .gif support

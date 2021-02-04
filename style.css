@@ -5,10 +5,12 @@ html, body {
 }
 
 ::-webkit-scrollbar {
-  -webkit-appearance: none;
+  /*-webkit-appearance: none;*/
+  display: none;
 }
 ::-webkit-scrollbar-corner { 
-  -webkit-appearance: none;
+  /*-webkit-appearance: none;*/
+  display: none;
 }
 
 .full {
@@ -41,13 +43,13 @@ html, body {
   margin: 25px;
 }
 
-div.settings {
+div.settings .holder {
     display:grid;
     grid-template-columns: max-content max-content;
     grid-gap:5px;
 }
-div.settings label       { text-align:right; }
-div.settings label:after { content: ":"; }
+div.settings .holder label       { text-align:right; }
+div.settings .holder label:after { content: ":"; }
 
 .popup p {
   padding-bottom: 20px;
@@ -89,6 +91,7 @@ text-align: center;
   position: absolute;
   background: rgb(32,32,32);
   overflow: scroll;
+  scrollbar-width: none;
   right: 0;
   top: 0;
   bottom: 20%;
@@ -110,6 +113,7 @@ text-align: center;
 }
 
 #header {
+  background: rgb(55,55,55);
   text-align: center;
   font-size: 12px;
 }
@@ -176,10 +180,15 @@ a:visited {
   bottom: 0;
   height: 20%;
   width: 100%;
+  overflow-x: scroll;
+  scrollbar-width: none;
+  padding: none;
 }
 
 #foreground #time canvas {
-  width: 100%;
+  position: absolute;
+  bottom: 0;
+  top: 0;
   height: 100%;
 }
 
