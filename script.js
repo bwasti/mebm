@@ -7,6 +7,25 @@ const dpr = window.devicePixelRatio || 1;
 let fps = 24;
 let max_size = 4000 * 1e6 / 4; // 4GB max
 
+// todo: add more types
+const ext_map = {
+  'mp4': 'video/mp4',
+  'mpeg4': 'video/mp4',
+  'mpeg': 'video/mpeg',
+  'ogv': 'video/ogg',
+  'webm': 'video/webm',
+  'gif': 'image/gif',
+  'jpg': 'image/jpeg',
+  'jpeg': 'image/jpeg',
+  'png': 'image/png',
+  'webp': 'image/webp',
+  'aac': 'audio/aac',
+  'mp3': 'audio/mpeg',
+  'oga': 'audio/ogg',
+  'wav': 'audio/wav',
+  'weba': 'audio/webm',
+  };
+
 class Settings {
   constructor() {
     this.div = document.createElement('div');
@@ -1361,24 +1380,7 @@ class Player {
       return;
     }
     let extension = uri.split(/[#?]/)[0].split('.').pop().trim();
-    // todo: add more types
-    const ext_map = {
-      'mp4': 'video/mp4',
-      'mpeg4': 'video/mp4',
-      'mpeg': 'video/mpeg',
-      'ogv': 'video/ogg',
-      'webm': 'video/webm',
-      'gif': 'image/gif',
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'png': 'image/png',
-      'webp': 'image/webp',
-      'aac': 'audio/aac',
-      'mp3': 'audio/mpeg',
-      'oga': 'audio/ogg',
-      'wav': 'audio/wav',
-      'weba': 'audio/webm',
-    };
+
     if (!ext_map[extension]) {
       if (extension == 'json') {
         let response = await fetch(uri);
@@ -1565,9 +1567,35 @@ function exportVideo(blob) {
   vid.currentTime = Number.MAX_SAFE_INTEGER;
 }
 
+function uploadSupportedType(files) {
+
+  let badUserExtensions = [];
+
+  for (let file of files) {
+    let extension = file.name.split('.').pop();
+    if (!(extension in ext_map)) {
+      badUserExtensions.push(file)
+    }
+  }
+
+  if (badUserExtensions.length) {
+    const badFiles = badUserExtensions.map((ext)=>"- "+ext.name).join('<br>');
+    const text = document.createElement('div');
+    text.style.textAlign = "left";
+    text.innerHTML = `
+    the file(s) you uploaded are not supported :
+    <br>
+    <br>
+    ${badFiles}
+    `;
+    popup(text);
+  }
+}
+
 function upload() {
   let f = document.getElementById('filepicker');
   f.addEventListener('input', function(e) {
+    if(!uploadSupportedType(e.target.files)){return}
     for (let file of e.target.files) {
       player.addFile(file);
     }
