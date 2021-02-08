@@ -1590,6 +1590,7 @@ function uploadSupportedType(files) {
     `;
     popup(text);
   }
+  return !badUserExtensions.length > 0;
 }
 
 function upload() {
