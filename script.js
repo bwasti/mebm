@@ -479,16 +479,23 @@ class ImageLayer extends MoveableLayer {
 
   render(ctx_out, ref_time) {
     if (!this.ready) {
-      return;
+        return;
     }
     let f = this.getFrame(ref_time);
     if (f) {
-      let scale = f[2];
-      let x = f[0] + this.canvas.width / 2 - this.width / 2;
-      let y = f[1] + this.canvas.height / 2 - this.height / 2;
-      this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-      this.ctx.drawImage(this.img, 0, 0, this.width, this.height, x, y, scale * this.width, scale * this.height);
-      this.drawScaled(this.ctx, ctx_out);
+        let scale = f[2];
+        let rotation = f[3] * Math.PI / 180;
+        let cx = f[0] + this.canvas.width / 2;
+        let cy = f[1] + this.canvas.height / 2;
+        
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.save();
+        this.ctx.translate(cx, cy);
+        this.ctx.rotate(rotation);
+        
+        this.ctx.drawImage(this.img, -this.width / 2 * scale, -this.height / 2 * scale, this.width * scale, this.height * scale);
+        this.ctx.restore();
+        this.drawScaled(this.ctx, ctx_out);
     }
   }
 }
@@ -1012,6 +1019,7 @@ class Player {
         // Your zoom/scale factor
         callback(scale, 0);
       } else if (e.altKey) {
+        e.preventDefault();
         let delta = e.deltaY;
         if (!Math.abs(delta) && e.deltaX != 0) {
           delta = e.deltaX * 0.5;
