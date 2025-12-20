@@ -509,6 +509,7 @@ class TextLayer extends MoveableLayer {
     this.color = "#ffffff";
     this.shadow = true;
     this.ready = true;
+    this.font = "Georgia";
   }
 
   init(player, preview) {
@@ -532,6 +533,21 @@ class TextLayer extends MoveableLayer {
       e => this.shadow = e.target.checked
     );
 
+    settings.add('font', null,
+      select => {
+        //only a few fonts... will add more soon
+        const options = ['Georgia', 'Arial', 'Monospace', 'Times New Roman'];
+        options.forEach(value => {
+          const opt = document.createElement('option');
+          opt.value = value;
+          opt.textContent = value;
+          select.appendChild(opt);
+        });
+        select.value = this.font;
+      },
+      e => this.font = e.target.value,
+      'select'
+    )
     let settings_link = document.createElement('a');
     settings_link.style.float = "right";
     settings_link.textContent = "[...]";
@@ -552,9 +568,8 @@ class TextLayer extends MoveableLayer {
   render(ctx_out, ref_time) {
     let f = this.getFrame(ref_time);
     if (f) {
-
       let scale = f[2];
-      this.ctx.font = Math.floor(scale * 30) + "px Georgia";
+      this.ctx.font = Math.floor(scale * 30) + "px " + this.font;
       let lines = this.name.split('\n');
       let rect = this.ctx.measureText(this.name);
       this.width = rect.width;
